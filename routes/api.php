@@ -40,6 +40,8 @@ use App\Http\Controllers\Api\SettingController;
 // ============================================================
 
 Route::get('/', [HomeController::class, 'index']);
+Route::get('/home',    [HomeController::class, 'index']);   // explicit, no ambiguity
+
 Route::get('/blog', [HomeController::class, 'blog']);
 Route::get('/blog/{id}', [HomeController::class, 'blogDetail']);
 Route::get('/faq', [HomeController::class, 'faq']);
