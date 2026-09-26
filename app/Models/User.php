@@ -254,27 +254,27 @@ class User extends Authenticatable
     public function getFullAddressAttribute(): string
     {
         $parts = [];
-        
+
         if (!empty($this->address)) {
             $parts[] = $this->address;
         }
-        
+
         if (!empty($this->city)) {
             $parts[] = $this->city;
         }
-        
+
         if (!empty($this->state)) {
             $parts[] = $this->state;
         }
-        
+
         if (!empty($this->postal_code)) {
             $parts[] = $this->postal_code;
         }
-        
+
         if (!empty($this->country)) {
             $parts[] = $this->country;
         }
-        
+
         return implode(', ', $parts);
     }
 
@@ -283,22 +283,17 @@ class User extends Authenticatable
      */
     public function getAvatarUrlAttribute(): string
     {
-        if (!empty($this->avatar)) {
-            // If it's a full URL
-            if (filter_var($this->avatar, FILTER_VALIDATE_URL)) {
-                return $this->avatar;
-            }
-            
-            // If it's a storage path
-            if (str_starts_with($this->avatar, 'avatars/')) {
-                return asset('storage/' . $this->avatar);
-            }
-            
-            return asset($this->avatar);
+        if (empty($this->avatar)) {
+            return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=random';
         }
-        
-        // Default avatar using UI Avatars API
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=random';
+
+        // Already a full URL (external service)
+        if (filter_var($this->avatar, FILTER_VALIDATE_URL)) {
+            return $this->avatar;
+        }
+
+        // Always return a relative path — the frontend's /storage proxy will handle it
+        return '/storage/' . ltrim($this->avatar, '/');
     }
 
     /**
@@ -308,13 +303,13 @@ class User extends Authenticatable
     {
         $words = explode(' ', $this->name);
         $initials = '';
-        
+
         foreach ($words as $word) {
             if (!empty($word)) {
                 $initials .= strtoupper($word[0]);
             }
         }
-        
+
         return substr($initials, 0, 2);
     }
 
@@ -338,7 +333,7 @@ class User extends Authenticatable
         return $this->status === self::STATUS_ACTIVE;
     }
 
-        /**
+    /**
      * Scope to only include super admins.
      */
     public function scopeSuperAdmin($query)
@@ -896,7 +891,7 @@ class User extends Authenticatable
     public function getUserDashboardSummary(int $userId): array
     {
         $user = $this->find($userId);
-        
+
         if (!$user) {
             return [];
         }
