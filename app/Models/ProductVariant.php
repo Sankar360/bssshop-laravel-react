@@ -209,7 +209,7 @@ public function getVariantsWithValues(int $productId): array
             'feature_values.value as value_text'
         )
         ->join('features', 'features.id', '=', 'pvv.feature_id')
-        ->leftJoin('feature_values', 'feature_values.id', '=', 'pvv.value')
+        ->leftJoin('feature_values', \DB::raw('feature_values.id::text'), '=', 'pvv.value')
         ->whereIn('pvv.variant_id', $variantIds)
         ->get()
         ->toArray();
@@ -300,7 +300,7 @@ public function getVariantsWithValues(int $productId): array
             'feature_values.value as value_text'
         )
         ->join('features', 'features.id', '=', 'pvv.feature_id')
-        ->leftJoin('feature_values', 'feature_values.id', '=', 'pvv.value')
+        ->leftJoin('feature_values', \DB::raw('feature_values.id::text'), '=', 'pvv.value')
         ->whereIn('pvv.variant_id', $variantIds)
         ->get()
         ->toArray();
@@ -363,7 +363,7 @@ public function getVariantsWithValues(int $productId): array
             'feature_values.value as value_text'
         )
         ->join('features', 'features.id', '=', 'pvv.feature_id')
-        ->leftJoin('feature_values', 'feature_values.id', '=', 'pvv.value')
+        ->leftJoin('feature_values', \DB::raw('feature_values.id::text'), '=', 'pvv.value')
         ->where('pvv.variant_id', $variant->id)
         ->get()
         ->toArray();
