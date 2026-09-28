@@ -170,6 +170,11 @@ class CategoryController extends Controller
 
         $result = $this->productModel->getFilteredProducts($filterData);
 
+        return response()->json([
+    'success' => true,
+    'debug_result' => $result,
+]);
+
         $rows = $result['rows'] ?? [];
         $rows = array_map(fn($row) => $this->normalizeProduct((array) $row), $rows);
 
