@@ -35,12 +35,28 @@ class Product extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-    'name', 'slug', 'description', 'short_description',
-    'price', 'sale_price', 'stock', 'sku', 'image',
-    'status', 'category_id', 'subcategory_id',
-    'rating', 'discount', 'is_featured', 'is_home',
-    'tags', 'weight', 'length', 'width', 'height',
-];
+        'name',
+        'slug',
+        'description',
+        'short_description',
+        'price',
+        'sale_price',
+        'stock',
+        'sku',
+        'image',
+        'status',
+        'category_id',
+        'subcategory_id',
+        'rating',
+        'discount',
+        'is_featured',
+        'is_home',
+        'tags',
+        'weight',
+        'length',
+        'width',
+        'height',
+    ];
 
     /**
      * The attributes that should be cast.
@@ -112,19 +128,19 @@ class Product extends Model
      * Clean empty string and null values before saving.
      * Replaces CI4's cleanData callback.
      */
-   protected function cleanData(): void
-{
-    $protectedFields = ['name', 'price', 'stock', 'status', 'is_featured', 'is_home'];
+    protected function cleanData(): void
+    {
+        $protectedFields = ['name', 'price', 'stock', 'status', 'is_featured', 'is_home'];
 
-    foreach ($this->attributes as $key => $value) {
-        if (in_array($key, $protectedFields, true)) {
-            continue;
-        }
-        if ($value === '') {
-            $this->attributes[$key] = null;
+        foreach ($this->attributes as $key => $value) {
+            if (in_array($key, $protectedFields, true)) {
+                continue;
+            }
+            if ($value === '') {
+                $this->attributes[$key] = null;
+            }
         }
     }
-}
 
     // ==================== RELATIONSHIPS ====================
 
@@ -308,7 +324,7 @@ class Product extends Model
     {
         $product = $this->with('category:id,name')
             ->find($id);
-            
+
         if (!$product) {
             return null;
         }
@@ -327,7 +343,7 @@ class Product extends Model
     public function getProductsWithCategories(): array
     {
         $products = $this->with('category:id,name')->get();
-        
+
         $result = [];
         foreach ($products as $product) {
             $data = $product->toArray();
@@ -347,7 +363,7 @@ class Product extends Model
     public function getProductWithImages(int $id): ?array
     {
         $product = $this->with('images')->find($id);
-        
+
         if (!$product) {
             return null;
         }
@@ -862,16 +878,16 @@ class Product extends Model
             $perPage = 12;
             $offset = ($page - 1) * $perPage;
 
-            // Non-variant products
             $sql = "SELECT 
                 p.id AS product_id,
-                NULL::integer AS variant_id,                p.name,
+                NULL::integer AS variant_id,
+                p.name,
                 p.slug,
                 p.rating,
                 p.stock,
                 p.price,
                 p.sale_price,
-                p.discount,
+                p.discount::numeric AS discount,
                 p.created_at,
                 p.updated_at,
                 (SELECT pi.image FROM product_images pi 
@@ -933,7 +949,7 @@ class Product extends Model
                 v.stock,
                 v.price,
                 v.sale_price,
-                v.discount,
+                v.discount::numeric AS discount,
                 p.created_at,
                 p.updated_at,
                 (SELECT vi.image FROM product_variant_images vi 
