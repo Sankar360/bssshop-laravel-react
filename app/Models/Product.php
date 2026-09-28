@@ -949,6 +949,7 @@ class Product extends Model
                 v.stock,
                 v.price,
                 v.sale_price,
+                v.discount::numeric AS discount,
                 p.created_at,
                 p.updated_at,
                 (SELECT vi.image FROM product_variant_images vi 
@@ -1030,6 +1031,13 @@ class Product extends Model
                 default => 'created_at DESC'
             };
 
+            \Log::error('getFilteredProducts DEBUG', [
+    'count_sql' => $countSql,
+    'bindings'  => $allBindings,
+    'is_array'  => is_array($allBindings),
+    'count'     => count($allBindings),
+]);
+
             $countSql = "SELECT COUNT(*) AS total FROM ({$unionSql}) AS combined";
             $countResult = DB::select($countSql, $allBindings);
             $total = isset($countResult[0]) ? (int) $countResult[0]->total : 0;
@@ -1080,7 +1088,12 @@ class Product extends Model
                 'last_page' => (int) max(1, ceil($total / $perPage)),
             ];
         } catch (\Exception $e) {
-            Log::error('getFilteredProducts error: ' . $e->getMessage());
+             \Log::error('getFilteredProducts FAILED: ' . $e->getMessage(), [
+        'paged_sql' => $pagedSql ?? null,
+        'bindings'  => $allBindings ?? null,
+        'trace'     => $e->getTraceAsString(),
+    ]);
+    throw $e; 
             return [
                 'rows' => [],
                 'total' => 0,
