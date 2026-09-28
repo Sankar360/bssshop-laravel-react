@@ -865,8 +865,7 @@ class Product extends Model
             // Non-variant products
             $sql = "SELECT 
                 p.id AS product_id,
-                NULL AS variant_id,
-                p.name,
+                NULL::integer AS variant_id,                p.name,
                 p.slug,
                 p.rating,
                 p.stock,
