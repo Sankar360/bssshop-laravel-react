@@ -1,0 +1,14 @@
+LOAD DATABASE
+    FROM mysql://root:root@bssshop-mysql:3306/bssshop_laravel
+    INTO postgresql://PLACEHOLDER?sslmode=allow
+
+WITH
+    create tables,
+    create indexes,
+    reset sequences,
+    foreign keys,
+    on error stop
+
+SET PostgreSQL PARAMETERS
+    maintenance_work_mem TO '128MB',
+    work_mem TO '16MB';

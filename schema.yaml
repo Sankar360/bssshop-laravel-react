@@ -1,0 +1,2089 @@
+schema_format: "1.0"
+name: __dmigrate_reverse__:mysql:database=bssshop_laravel
+version: 0.0.0-reverse
+tables:
+  blog:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      title:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      slug:
+        type: text
+        max_length: 255
+        ordinal: 3
+        required: true
+        unique: true
+        unique_constraint: slug
+      category:
+        type: text
+        max_length: 100
+        ordinal: 4
+        required: true
+      content:
+        type: text
+        ordinal: 5
+        required: true
+      excerpt:
+        type: text
+        max_length: 500
+        ordinal: 6
+        required: true
+      image:
+        type: text
+        max_length: 255
+        ordinal: 7
+      author:
+        type: text
+        max_length: 100
+        ordinal: 8
+        required: true
+      status:
+        type: enum
+        values:
+        - draft
+        - published
+        - archived
+        ordinal: 9
+        required: true
+        default: draft
+      views:
+        type: integer
+        ordinal: 10
+        required: true
+        default: 0
+      published_at:
+        type: datetime
+        ordinal: 11
+      meta_title:
+        type: text
+        max_length: 255
+        ordinal: 12
+      meta_description:
+        type: text
+        max_length: 500
+        ordinal: 13
+      meta_keywords:
+        type: text
+        max_length: 255
+        ordinal: 14
+      created_at:
+        type: datetime
+        ordinal: 15
+      updated_at:
+        type: datetime
+        ordinal: 16
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  cache:
+    columns:
+      key:
+        type: text
+        max_length: 255
+        ordinal: 1
+      value:
+        type: text
+        ordinal: 2
+        required: true
+      expiration:
+        type: integer
+        ordinal: 3
+        required: true
+    primary_key:
+    - key
+    indices:
+    - name: cache_expiration_index
+      columns:
+      - expiration
+    metadata:
+      engine: InnoDB
+  cache_locks:
+    columns:
+      key:
+        type: text
+        max_length: 255
+        ordinal: 1
+      owner:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      expiration:
+        type: integer
+        ordinal: 3
+        required: true
+    primary_key:
+    - key
+    indices:
+    - name: cache_locks_expiration_index
+      columns:
+      - expiration
+    metadata:
+      engine: InnoDB
+  categories:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      parent_id:
+        type: integer
+        ordinal: 2
+      name:
+        type: text
+        max_length: 100
+        ordinal: 3
+        required: true
+      slug:
+        type: text
+        max_length: 100
+        ordinal: 4
+        required: true
+        unique: true
+        unique_constraint: slug
+      icon:
+        type: text
+        max_length: 50
+        ordinal: 5
+      description:
+        type: text
+        ordinal: 6
+      status:
+        type: boolean
+        ordinal: 7
+        required: true
+        default: true
+      sort_order:
+        type: integer
+        ordinal: 8
+        required: true
+        default: 0
+      created_at:
+        type: datetime
+        ordinal: 9
+      updated_at:
+        type: datetime
+        ordinal: 10
+    primary_key:
+    - id
+    indices:
+    - name: parent_id
+      columns:
+      - parent_id
+    - name: status
+      columns:
+      - status
+    constraints:
+    - name: categories_parent_id_foreign
+      type: foreign_key
+      columns:
+      - parent_id
+      references:
+        table: categories
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: fk_categories_parent
+      type: foreign_key
+      columns:
+      - parent_id
+      references:
+        table: categories
+        columns:
+        - id
+        on_delete: cascade
+    metadata:
+      engine: InnoDB
+  ci4_cache:
+    columns:
+      key:
+        type: text
+        max_length: 255
+        ordinal: 1
+      value:
+        type: text
+        ordinal: 2
+        required: true
+      expiration:
+        type: integer
+        ordinal: 3
+        required: true
+    primary_key:
+    - key
+    indices:
+    - name: cache_expiration_index
+      columns:
+      - expiration
+    metadata:
+      engine: InnoDB
+  ci4_cache_locks:
+    columns:
+      key:
+        type: text
+        max_length: 255
+        ordinal: 1
+      owner:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      expiration:
+        type: integer
+        ordinal: 3
+        required: true
+    primary_key:
+    - key
+    indices:
+    - name: cache_locks_expiration_index
+      columns:
+      - expiration
+    metadata:
+      engine: InnoDB
+  ci4_failed_jobs:
+    columns:
+      id:
+        type: biginteger
+        ordinal: 1
+        generation:
+          type: identity
+          mode: by_default
+          legacy_serial_syntax: true
+      uuid:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+        unique: true
+        unique_constraint: failed_jobs_uuid_unique
+      connection:
+        type: text
+        ordinal: 3
+        required: true
+      queue:
+        type: text
+        ordinal: 4
+        required: true
+      payload:
+        type: text
+        ordinal: 5
+        required: true
+      exception:
+        type: text
+        ordinal: 6
+        required: true
+      failed_at:
+        type: datetime
+        ordinal: 7
+        required: true
+        default: current_timestamp
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  ci4_job_batches:
+    columns:
+      id:
+        type: text
+        max_length: 255
+        ordinal: 1
+      name:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      total_jobs:
+        type: integer
+        ordinal: 3
+        required: true
+      pending_jobs:
+        type: integer
+        ordinal: 4
+        required: true
+      failed_jobs:
+        type: integer
+        ordinal: 5
+        required: true
+      failed_job_ids:
+        type: text
+        ordinal: 6
+        required: true
+      options:
+        type: text
+        ordinal: 7
+      cancelled_at:
+        type: integer
+        ordinal: 8
+      created_at:
+        type: integer
+        ordinal: 9
+        required: true
+      finished_at:
+        type: integer
+        ordinal: 10
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  ci4_jobs:
+    columns:
+      id:
+        type: biginteger
+        ordinal: 1
+        generation:
+          type: identity
+          mode: by_default
+          legacy_serial_syntax: true
+      queue:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      payload:
+        type: text
+        ordinal: 3
+        required: true
+      attempts:
+        type: smallint
+        ordinal: 4
+        required: true
+      reserved_at:
+        type: integer
+        ordinal: 5
+      available_at:
+        type: integer
+        ordinal: 6
+        required: true
+      created_at:
+        type: integer
+        ordinal: 7
+        required: true
+    primary_key:
+    - id
+    indices:
+    - name: jobs_queue_index
+      columns:
+      - queue
+    metadata:
+      engine: InnoDB
+  ci4_migrations:
+    columns:
+      id:
+        type: biginteger
+        ordinal: 1
+        generation:
+          type: identity
+          mode: by_default
+          legacy_serial_syntax: true
+      version:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      class:
+        type: text
+        max_length: 255
+        ordinal: 3
+        required: true
+      group:
+        type: text
+        max_length: 255
+        ordinal: 4
+        required: true
+      namespace:
+        type: text
+        max_length: 255
+        ordinal: 5
+        required: true
+      time:
+        type: integer
+        ordinal: 6
+        required: true
+      batch:
+        type: integer
+        ordinal: 7
+        required: true
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  contact_messages:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      name:
+        type: text
+        max_length: 100
+        ordinal: 2
+        required: true
+      email:
+        type: text
+        max_length: 100
+        ordinal: 3
+        required: true
+      subject:
+        type: text
+        max_length: 255
+        ordinal: 4
+      message:
+        type: text
+        ordinal: 5
+        required: true
+      status:
+        type: enum
+        values:
+        - unread
+        - read
+        - replied
+        ordinal: 6
+        default: unread
+      admin_reply:
+        type: text
+        ordinal: 7
+      replied_at:
+        type: datetime
+        ordinal: 8
+      updated_at:
+        type: datetime
+        ordinal: 9
+      created_at:
+        type: datetime
+        ordinal: 10
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  failed_jobs:
+    columns:
+      id:
+        type: biginteger
+        ordinal: 1
+        generation:
+          type: identity
+          mode: by_default
+          legacy_serial_syntax: true
+      uuid:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+        unique: true
+        unique_constraint: failed_jobs_uuid_unique
+      connection:
+        type: text
+        ordinal: 3
+        required: true
+      queue:
+        type: text
+        ordinal: 4
+        required: true
+      payload:
+        type: text
+        ordinal: 5
+        required: true
+      exception:
+        type: text
+        ordinal: 6
+        required: true
+      failed_at:
+        type: datetime
+        ordinal: 7
+        required: true
+        default: current_timestamp
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  faqs:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      question:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      answer:
+        type: text
+        ordinal: 3
+        required: true
+      category:
+        type: text
+        max_length: 100
+        ordinal: 4
+      status:
+        type: enum
+        values:
+        - active
+        - inactive
+        ordinal: 5
+        default: active
+      order:
+        type: integer
+        ordinal: 6
+        default: 0
+      created_at:
+        type: datetime
+        ordinal: 7
+      updated_at:
+        type: datetime
+        ordinal: 8
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  feature_category_mapping:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      feature_id:
+        type: integer
+        ordinal: 2
+        required: true
+      category_id:
+        type: integer
+        ordinal: 3
+      sub_category_id:
+        type: integer
+        ordinal: 4
+      created_at:
+        type: datetime
+        ordinal: 5
+    primary_key:
+    - id
+    indices:
+    - name: idx_category_id
+      columns:
+      - category_id
+    - name: idx_feature_id
+      columns:
+      - feature_id
+    - name: idx_sub_category_id
+      columns:
+      - sub_category_id
+    metadata:
+      engine: InnoDB
+  feature_values:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      feature_id:
+        type: integer
+        ordinal: 2
+        required: true
+      value:
+        type: text
+        max_length: 255
+        ordinal: 3
+        required: true
+      sort_order:
+        type: integer
+        ordinal: 4
+        required: true
+        default: 0
+      status:
+        type: boolean
+        ordinal: 5
+        required: true
+        default: true
+      created_at:
+        type: datetime
+        ordinal: 6
+      updated_at:
+        type: datetime
+        ordinal: 7
+    primary_key:
+    - id
+    constraints:
+    - name: feature_values_feature_id_foreign
+      type: foreign_key
+      columns:
+      - feature_id
+      references:
+        table: features
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  features:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      name:
+        type: text
+        max_length: 150
+        ordinal: 2
+        required: true
+      input_type:
+        type: enum
+        values:
+        - text
+        - dropdown
+        - checkbox
+        ordinal: 3
+        required: true
+        default: text
+      options:
+        type: text
+        ordinal: 4
+      status:
+        type: boolean
+        ordinal: 5
+        required: true
+        default: true
+      created_at:
+        type: datetime
+        ordinal: 6
+      updated_at:
+        type: datetime
+        ordinal: 7
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  home_banner:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      badge_text:
+        type: text
+        max_length: 100
+        ordinal: 2
+      title_line1:
+        type: text
+        max_length: 200
+        ordinal: 3
+      title_line2:
+        type: text
+        max_length: 200
+        ordinal: 4
+      subtitle:
+        type: text
+        max_length: 500
+        ordinal: 5
+      button_text:
+        type: text
+        max_length: 100
+        ordinal: 6
+      button_link:
+        type: text
+        max_length: 255
+        ordinal: 7
+      button_icon:
+        type: text
+        max_length: 50
+        ordinal: 8
+      is_active:
+        type: boolean
+        ordinal: 9
+        default: true
+      created_at:
+        type: datetime
+        ordinal: 10
+      updated_at:
+        type: datetime
+        ordinal: 11
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  invoices:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      order_id:
+        type: integer
+        ordinal: 2
+        required: true
+      invoice_number:
+        type: text
+        max_length: 50
+        ordinal: 3
+        required: true
+        unique: true
+        unique_constraint: invoice_number
+      user_id:
+        type: integer
+        ordinal: 4
+        required: true
+      issue_date:
+        type: date
+        ordinal: 5
+        required: true
+      due_date:
+        type: date
+        ordinal: 6
+        required: true
+      subtotal:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 7
+        required: true
+        default: 0.0
+      tax:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 8
+        required: true
+        default: 0.0
+      discount:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 9
+        required: true
+        default: 0.0
+      total:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 10
+        required: true
+        default: 0.0
+      status:
+        type: enum
+        values:
+        - paid
+        - unpaid
+        - overdue
+        - cancelled
+        ordinal: 11
+        required: true
+        default: unpaid
+      notes:
+        type: text
+        ordinal: 12
+      payment_method:
+        type: text
+        max_length: 50
+        ordinal: 13
+      payment_date:
+        type: datetime
+        ordinal: 14
+      created_at:
+        type: datetime
+        ordinal: 15
+      updated_at:
+        type: datetime
+        ordinal: 16
+    primary_key:
+    - id
+    constraints:
+    - name: invoices_order_id_foreign
+      type: foreign_key
+      columns:
+      - order_id
+      references:
+        table: orders
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: invoices_user_id_foreign
+      type: foreign_key
+      columns:
+      - user_id
+      references:
+        table: users
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  job_batches:
+    columns:
+      id:
+        type: text
+        max_length: 255
+        ordinal: 1
+      name:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      total_jobs:
+        type: integer
+        ordinal: 3
+        required: true
+      pending_jobs:
+        type: integer
+        ordinal: 4
+        required: true
+      failed_jobs:
+        type: integer
+        ordinal: 5
+        required: true
+      failed_job_ids:
+        type: text
+        ordinal: 6
+        required: true
+      options:
+        type: text
+        ordinal: 7
+      cancelled_at:
+        type: integer
+        ordinal: 8
+      created_at:
+        type: integer
+        ordinal: 9
+        required: true
+      finished_at:
+        type: integer
+        ordinal: 10
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  jobs:
+    columns:
+      id:
+        type: biginteger
+        ordinal: 1
+        generation:
+          type: identity
+          mode: by_default
+          legacy_serial_syntax: true
+      queue:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      payload:
+        type: text
+        ordinal: 3
+        required: true
+      attempts:
+        type: smallint
+        ordinal: 4
+        required: true
+      reserved_at:
+        type: integer
+        ordinal: 5
+      available_at:
+        type: integer
+        ordinal: 6
+        required: true
+      created_at:
+        type: integer
+        ordinal: 7
+        required: true
+    primary_key:
+    - id
+    indices:
+    - name: jobs_queue_index
+      columns:
+      - queue
+    metadata:
+      engine: InnoDB
+  languages:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      code:
+        type: text
+        max_length: 10
+        ordinal: 2
+        required: true
+        unique: true
+        unique_constraint: code
+      name:
+        type: text
+        max_length: 50
+        ordinal: 3
+        required: true
+      native_name:
+        type: text
+        max_length: 50
+        ordinal: 4
+        required: true
+      flag:
+        type: text
+        max_length: 10
+        ordinal: 5
+      is_active:
+        type: boolean
+        ordinal: 6
+        required: true
+        default: true
+      is_default:
+        type: boolean
+        ordinal: 7
+        required: true
+        default: false
+      created_at:
+        type: datetime
+        ordinal: 8
+      updated_at:
+        type: datetime
+        ordinal: 9
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  migrations:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      migration:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      batch:
+        type: integer
+        ordinal: 3
+        required: true
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  navigation_menus:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      menu_name:
+        type: text
+        max_length: 100
+        ordinal: 2
+        required: true
+      url:
+        type: text
+        max_length: 255
+        ordinal: 3
+        required: true
+      display_header:
+        type: boolean
+        ordinal: 4
+        required: true
+        default: false
+      display_footer:
+        type: boolean
+        ordinal: 5
+        required: true
+        default: false
+      sort_order:
+        type: integer
+        ordinal: 6
+        required: true
+        default: 0
+      status:
+        type: boolean
+        ordinal: 7
+        required: true
+        default: true
+      created_at:
+        type: datetime
+        ordinal: 8
+      updated_at:
+        type: datetime
+        ordinal: 9
+    primary_key:
+    - id
+    indices:
+    - name: display_footer
+      columns:
+      - display_footer
+    - name: display_header
+      columns:
+      - display_header
+    - name: sort_order
+      columns:
+      - sort_order
+    - name: status
+      columns:
+      - status
+    metadata:
+      engine: InnoDB
+  order_items:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      order_id:
+        type: integer
+        ordinal: 2
+        required: true
+      product_id:
+        type: integer
+        ordinal: 3
+        required: true
+      variant_id:
+        type: integer
+        ordinal: 4
+        default: 0
+      quantity:
+        type: integer
+        ordinal: 5
+        required: true
+      price:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 6
+        required: true
+      subtotal:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 7
+        required: true
+        default: 0.0
+      shipping:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 8
+        default: 0.0
+      tax:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 9
+        default: 0.0
+      created_at:
+        type: datetime
+        ordinal: 10
+    primary_key:
+    - id
+    indices:
+    - name: idx_variant_id
+      columns:
+      - variant_id
+    constraints:
+    - name: order_items_order_id_foreign
+      type: foreign_key
+      columns:
+      - order_id
+      references:
+        table: orders
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: order_items_product_id_foreign
+      type: foreign_key
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  orders:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      user_id:
+        type: integer
+        ordinal: 2
+        required: true
+      order_number:
+        type: text
+        max_length: 50
+        ordinal: 3
+        required: true
+        unique: true
+        unique_constraint: order_number
+      razorpay_order_id:
+        type: text
+        max_length: 255
+        ordinal: 4
+      razorpay_payment_id:
+        type: text
+        max_length: 255
+        ordinal: 5
+      razorpay_signature:
+        type: text
+        max_length: 255
+        ordinal: 6
+      payment_method_display:
+        type: text
+        max_length: 50
+        ordinal: 7
+      total:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 8
+        required: true
+      payment_status:
+        type: enum
+        values:
+        - pending
+        - paid
+        - failed
+        - refunded
+        - partially_refunded
+        ordinal: 9
+        required: true
+        default: pending
+      order_status:
+        type: enum
+        values:
+        - pending
+        - processing
+        - completed
+        - cancelled
+        ordinal: 10
+        required: true
+        default: pending
+      shipping_address:
+        type: text
+        ordinal: 11
+        required: true
+      created_at:
+        type: datetime
+        ordinal: 12
+      updated_at:
+        type: datetime
+        ordinal: 13
+    primary_key:
+    - id
+    indices:
+    - name: idx_razorpay_order_id
+      columns:
+      - razorpay_order_id
+    - name: idx_razorpay_payment_id
+      columns:
+      - razorpay_payment_id
+    constraints:
+    - name: orders_user_id_foreign
+      type: foreign_key
+      columns:
+      - user_id
+      references:
+        table: users
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  personal_access_tokens:
+    columns:
+      id:
+        type: biginteger
+        ordinal: 1
+        generation:
+          type: identity
+          mode: by_default
+          legacy_serial_syntax: true
+      tokenable_type:
+        type: text
+        max_length: 255
+        ordinal: 2
+        required: true
+      tokenable_id:
+        type: biginteger
+        ordinal: 3
+        required: true
+      name:
+        type: text
+        ordinal: 4
+        required: true
+      token:
+        type: text
+        max_length: 64
+        ordinal: 5
+        required: true
+        unique: true
+        unique_constraint: personal_access_tokens_token_unique
+      abilities:
+        type: text
+        ordinal: 6
+      last_used_at:
+        type: datetime
+        ordinal: 7
+      expires_at:
+        type: datetime
+        ordinal: 8
+      created_at:
+        type: datetime
+        ordinal: 9
+      updated_at:
+        type: datetime
+        ordinal: 10
+    primary_key:
+    - id
+    indices:
+    - name: personal_access_tokens_expires_at_index
+      columns:
+      - expires_at
+    - name: personal_access_tokens_tokenable_type_tokenable_id_index
+      columns:
+      - tokenable_type
+      - tokenable_id
+    metadata:
+      engine: InnoDB
+  product_categories:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      parent_id:
+        type: integer
+        ordinal: 2
+      name:
+        type: text
+        max_length: 100
+        ordinal: 3
+        required: true
+      icon:
+        type: text
+        max_length: 50
+        ordinal: 4
+        default: bi-box
+      item_count:
+        type: integer
+        ordinal: 5
+        default: 0
+      link:
+        type: text
+        max_length: 255
+        ordinal: 6
+        default: "#"
+      sort_order:
+        type: integer
+        ordinal: 7
+        default: 0
+      is_active:
+        type: boolean
+        ordinal: 8
+        default: true
+      created_at:
+        type: datetime
+        ordinal: 9
+      updated_at:
+        type: datetime
+        ordinal: 10
+    primary_key:
+    - id
+    indices:
+    - name: idx_parent_id
+      columns:
+      - parent_id
+    metadata:
+      engine: InnoDB
+  product_feature_values:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      product_id:
+        type: integer
+        ordinal: 2
+        required: true
+      feature_id:
+        type: integer
+        ordinal: 3
+        required: true
+      value:
+        type: text
+        max_length: 255
+        ordinal: 4
+      created_at:
+        type: datetime
+        ordinal: 5
+      updated_at:
+        type: datetime
+        ordinal: 6
+    primary_key:
+    - id
+    indices:
+    - name: idx_product_feature
+      columns:
+      - product_id
+      - feature_id
+    constraints:
+    - name: product_feature_values_feature_id_foreign
+      type: foreign_key
+      columns:
+      - feature_id
+      references:
+        table: features
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: product_feature_values_product_id_foreign
+      type: foreign_key
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  product_images:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      product_id:
+        type: integer
+        ordinal: 2
+        required: true
+      image:
+        type: text
+        max_length: 255
+        ordinal: 3
+        required: true
+      is_primary:
+        type: boolean
+        ordinal: 4
+        default: false
+      sort_order:
+        type: integer
+        ordinal: 5
+        default: 0
+      created_at:
+        type: datetime
+        ordinal: 6
+      updated_at:
+        type: datetime
+        ordinal: 7
+    primary_key:
+    - id
+    indices:
+    - name: product_id
+      columns:
+      - product_id
+    constraints:
+    - name: fk_product_images_product
+      type: foreign_key
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - id
+        on_delete: cascade
+    metadata:
+      engine: InnoDB
+  product_specifications:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      product_id:
+        type: integer
+        ordinal: 2
+        required: true
+      label:
+        type: text
+        max_length: 255
+        ordinal: 3
+        required: true
+      value:
+        type: text
+        ordinal: 4
+        required: true
+      sort_order:
+        type: integer
+        ordinal: 5
+        required: true
+        default: 0
+      created_at:
+        type: datetime
+        ordinal: 6
+      updated_at:
+        type: datetime
+        ordinal: 7
+    primary_key:
+    - id
+    indices:
+    - name: product_id
+      columns:
+      - product_id
+    constraints:
+    - name: product_specifications_product_id_foreign
+      type: foreign_key
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  product_variant_images:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      variant_id:
+        type: integer
+        ordinal: 2
+        required: true
+      product_id:
+        type: integer
+        ordinal: 3
+        required: true
+      image:
+        type: text
+        max_length: 255
+        ordinal: 4
+        required: true
+      is_primary:
+        type: boolean
+        ordinal: 5
+        required: true
+        default: false
+      sort_order:
+        type: integer
+        ordinal: 6
+        required: true
+        default: 0
+      created_at:
+        type: datetime
+        ordinal: 7
+      updated_at:
+        type: datetime
+        ordinal: 8
+    primary_key:
+    - id
+    constraints:
+    - name: product_variant_images_product_id_foreign
+      type: foreign_key
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: product_variant_images_variant_id_foreign
+      type: foreign_key
+      columns:
+      - variant_id
+      references:
+        table: product_variants
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  product_variant_values:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      variant_id:
+        type: integer
+        ordinal: 2
+        required: true
+      feature_id:
+        type: integer
+        ordinal: 3
+        required: true
+      value:
+        type: text
+        max_length: 255
+        ordinal: 4
+        required: true
+      created_at:
+        type: datetime
+        ordinal: 5
+      updated_at:
+        type: datetime
+        ordinal: 6
+    primary_key:
+    - id
+    constraints:
+    - name: product_variant_values_feature_id_foreign
+      type: foreign_key
+      columns:
+      - feature_id
+      references:
+        table: features
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: product_variant_values_variant_id_foreign
+      type: foreign_key
+      columns:
+      - variant_id
+      references:
+        table: product_variants
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  product_variants:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      product_id:
+        type: integer
+        ordinal: 2
+        required: true
+      sku:
+        type: text
+        max_length: 100
+        ordinal: 3
+        required: true
+      slug:
+        type: text
+        max_length: 255
+        ordinal: 4
+        required: true
+      price:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 5
+        required: true
+        default: 0.0
+      sale_price:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 6
+      discount:
+        type: decimal
+        precision: 5
+        scale: 2
+        ordinal: 7
+        default: 0.0
+      rating:
+        type: decimal
+        precision: 2
+        scale: 1
+        ordinal: 8
+        default: 0.0
+      stock:
+        type: integer
+        ordinal: 9
+        required: true
+        default: 0
+      status:
+        type: boolean
+        ordinal: 10
+        required: true
+        default: true
+      created_at:
+        type: datetime
+        ordinal: 11
+      updated_at:
+        type: datetime
+        ordinal: 12
+    primary_key:
+    - id
+    constraints:
+    - name: product_variants_product_id_foreign
+      type: foreign_key
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  products:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      name:
+        type: text
+        max_length: 200
+        ordinal: 2
+        required: true
+      slug:
+        type: text
+        max_length: 200
+        ordinal: 3
+        required: true
+        unique: true
+        unique_constraint: slug
+      description:
+        type: text
+        ordinal: 4
+        required: true
+      price:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 5
+        required: true
+      image:
+        type: text
+        max_length: 255
+        ordinal: 6
+      stock:
+        type: integer
+        ordinal: 7
+        required: true
+        default: 0
+      status:
+        type: enum
+        values:
+        - active
+        - inactive
+        ordinal: 8
+        required: true
+        default: active
+      category_id:
+        type: integer
+        ordinal: 9
+      subcategory_id:
+        type: integer
+        ordinal: 10
+      rating:
+        type: decimal
+        precision: 2
+        scale: 1
+        ordinal: 11
+        default: 0.0
+      discount:
+        type: integer
+        ordinal: 12
+        default: 0
+      created_at:
+        type: datetime
+        ordinal: 13
+      updated_at:
+        type: datetime
+        ordinal: 14
+      short_description:
+        type: text
+        max_length: 500
+        ordinal: 15
+      sale_price:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 16
+      sku:
+        type: text
+        max_length: 100
+        ordinal: 17
+        unique: true
+        unique_constraint: sku
+      tags:
+        type: text
+        max_length: 255
+        ordinal: 18
+      weight:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 19
+      length:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 20
+      width:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 21
+      height:
+        type: decimal
+        precision: 10
+        scale: 2
+        ordinal: 22
+      is_featured:
+        type: boolean
+        ordinal: 23
+        default: false
+      is_home:
+        type: boolean
+        ordinal: 24
+        default: false
+    primary_key:
+    - id
+    indices:
+    - name: idx_products_subcategory_id
+      columns:
+      - subcategory_id
+    - name: subcategory_id
+      columns:
+      - subcategory_id
+    constraints:
+    - name: fk_products_category
+      type: foreign_key
+      columns:
+      - category_id
+      references:
+        table: product_categories
+        columns:
+        - id
+        on_delete: set_null
+    - name: fk_products_subcategory
+      type: foreign_key
+      columns:
+      - subcategory_id
+      references:
+        table: product_categories
+        columns:
+        - id
+        on_delete: set_null
+        on_update: cascade
+    metadata:
+      engine: InnoDB
+  settings:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      key:
+        type: text
+        max_length: 100
+        ordinal: 2
+        required: true
+        unique: true
+        unique_constraint: key
+      value:
+        type: text
+        ordinal: 3
+        required: true
+      created_at:
+        type: datetime
+        ordinal: 4
+      updated_at:
+        type: datetime
+        ordinal: 5
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  themes:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      name:
+        type: text
+        max_length: 50
+        ordinal: 2
+        required: true
+        unique: true
+        unique_constraint: name
+      display_name:
+        type: text
+        max_length: 100
+        ordinal: 3
+        required: true
+      description:
+        type: text
+        ordinal: 4
+      preview_image:
+        type: text
+        max_length: 255
+        ordinal: 5
+      is_active:
+        type: boolean
+        ordinal: 6
+        required: true
+        default: true
+      is_default:
+        type: boolean
+        ordinal: 7
+        required: true
+        default: false
+      created_at:
+        type: datetime
+        ordinal: 8
+      updated_at:
+        type: datetime
+        ordinal: 9
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  timezones:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      name:
+        type: text
+        max_length: 100
+        ordinal: 2
+        required: true
+        unique: true
+        unique_constraint: name
+      offset:
+        type: text
+        max_length: 10
+        ordinal: 3
+        required: true
+      abbreviation:
+        type: text
+        max_length: 10
+        ordinal: 4
+        required: true
+      is_active:
+        type: boolean
+        ordinal: 5
+        required: true
+        default: true
+      is_default:
+        type: boolean
+        ordinal: 6
+        required: true
+        default: false
+      created_at:
+        type: datetime
+        ordinal: 7
+      updated_at:
+        type: datetime
+        ordinal: 8
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  user_preferences:
+    columns:
+      id:
+        type: biginteger
+        ordinal: 1
+        generation:
+          type: identity
+          mode: by_default
+          legacy_serial_syntax: true
+      user_id:
+        type: biginteger
+        ordinal: 2
+        required: true
+      language:
+        type: text
+        max_length: 10
+        ordinal: 3
+        required: true
+        default: en
+      timezone:
+        type: text
+        max_length: 50
+        ordinal: 4
+        required: true
+        default: UTC
+      theme:
+        type: text
+        max_length: 50
+        ordinal: 5
+        required: true
+        default: light
+      notifications:
+        type: text
+        max_length: 10
+        ordinal: 6
+        required: true
+        default: "on"
+      newsletter:
+        type: boolean
+        ordinal: 7
+        required: true
+        default: false
+      created_at:
+        type: datetime
+        ordinal: 8
+      updated_at:
+        type: datetime
+        ordinal: 9
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  users:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      name:
+        type: text
+        max_length: 100
+        ordinal: 2
+        required: true
+      email:
+        type: text
+        max_length: 100
+        ordinal: 3
+        required: true
+        unique: true
+        unique_constraint: email
+      password:
+        type: text
+        max_length: 255
+        ordinal: 4
+        required: true
+      role:
+        type: enum
+        values:
+        - admin
+        - user
+        ordinal: 5
+        required: true
+        default: user
+      status:
+        type: enum
+        values:
+        - active
+        - inactive
+        ordinal: 6
+        required: true
+        default: active
+      created_at:
+        type: datetime
+        ordinal: 7
+      updated_at:
+        type: datetime
+        ordinal: 8
+      phone:
+        type: text
+        max_length: 20
+        ordinal: 9
+      avatar:
+        type: text
+        max_length: 255
+        ordinal: 10
+      address:
+        type: text
+        max_length: 255
+        ordinal: 11
+      city:
+        type: text
+        max_length: 100
+        ordinal: 12
+      state:
+        type: text
+        max_length: 100
+        ordinal: 13
+      postal_code:
+        type: text
+        max_length: 20
+        ordinal: 14
+      country:
+        type: text
+        max_length: 50
+        ordinal: 15
+        default: US
+      notes:
+        type: text
+        ordinal: 16
+      super_admin:
+        type: boolean
+        ordinal: 17
+        required: true
+        default: false
+    primary_key:
+    - id
+    metadata:
+      engine: InnoDB
+  wishlist:
+    columns:
+      id:
+        type: identifier
+        auto_increment: true
+        ordinal: 1
+      user_id:
+        type: integer
+        ordinal: 2
+        required: true
+      product_id:
+        type: integer
+        ordinal: 3
+        required: true
+      variant_id:
+        type: integer
+        ordinal: 4
+        required: true
+      created_at:
+        type: datetime
+        ordinal: 5
+    primary_key:
+    - id
+    constraints:
+    - name: wishlist_product_id_foreign
+      type: foreign_key
+      columns:
+      - product_id
+      references:
+        table: products
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: wishlist_user_id_foreign
+      type: foreign_key
+      columns:
+      - user_id
+      references:
+        table: users
+        columns:
+        - id
+        on_delete: cascade
+        on_update: cascade
+    - name: user_id_product_id
+      type: unique
+      columns:
+      - user_id
+      - product_id
+    metadata:
+      engine: InnoDB
