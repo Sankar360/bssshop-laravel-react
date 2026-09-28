@@ -5,7 +5,6 @@ RUN apt-get update \
     && docker-php-ext-install pdo pdo_mysql pdo_pgsql zip \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
-    
 
 WORKDIR /var/www/html
 
@@ -25,6 +24,8 @@ RUN printf '%s\n' \
 '    </Directory>' \
 '</VirtualHost>' \
 > /etc/apache2/sites-available/000-default.conf
+
+RUN php artisan storage:link || true
 
 RUN chown -R www-data:www-data /var/www/html/storage \
     /var/www/html/bootstrap/cache
