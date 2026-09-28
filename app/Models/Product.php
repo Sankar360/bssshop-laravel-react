@@ -949,7 +949,6 @@ class Product extends Model
                 v.stock,
                 v.price,
                 v.sale_price,
-                v.discount::numeric AS discount,
                 p.created_at,
                 p.updated_at,
                 (SELECT vi.image FROM product_variant_images vi 
