@@ -571,16 +571,6 @@ class CategoryController extends Controller
 
         $result = $this->productModel->getFilteredProducts($filterData);
 
-        return response()->json([
-            'success' => true,
-            'debug' => [
-                'filterData'    => $filterData,
-                'result_rows'   => count($result['rows'] ?? []),
-                'result_total'  => $result['total'] ?? 0,
-                'result_raw'    => $result,
-            ],
-        ]);
-
         $rows = $result['rows'] ?? [];
         $rows = array_map(fn($row) => $this->normalizeProduct((array) $row), $rows);
 
