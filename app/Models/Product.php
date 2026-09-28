@@ -964,22 +964,22 @@ class Product extends Model
                 INNER JOIN (
                     SELECT product_id, MIN(price) AS min_price
                     FROM product_variants
-                    WHERE status = true AND stock > 0
+                    WHERE status = 1 AND stock > 0
                     GROUP BY product_id
                 ) cheapest ON cheapest.product_id = pv1.product_id
                             AND cheapest.min_price = pv1.price
                 INNER JOIN (
                     SELECT product_id, price, MIN(id) AS min_id
                     FROM product_variants
-                    WHERE status = true AND stock > 0
+                    WHERE status = 1 AND stock > 0
                     GROUP BY product_id, price
                 ) tie ON tie.product_id = pv1.product_id
                        AND tie.price = pv1.price
                        AND tie.min_id = pv1.id
-                WHERE pv1.status = true AND pv1.stock > 0
+                WHERE pv1.status = 1 AND pv1.stock > 0
             ) v ON v.product_id = p.id
             WHERE p.status = 'active' 
-            AND v.status = true
+            AND v.status = 1
             AND v.stock > 0";
 
             $bindingsVariant = [];
