@@ -1080,16 +1080,17 @@ class Product extends Model
                 'current_page' => $page,
                 'last_page' => (int) max(1, ceil($total / $perPage)),
             ];
-        } catch (\Exception $e) {
-            \Log::error('getFilteredProducts error: ' . $e->getMessage());
-            return [
-                'rows' => [],
-                'total' => 0,
-                'per_page' => 12,
-                'current_page' => 1,
-                'last_page' => 1,
-            ];
-        }
+        } atch (\Exception $e) {
+    return [
+        'rows' => [],
+        'total' => 0,
+        'per_page' => 12,
+        'current_page' => 1,
+        'last_page' => 1,
+        'debug_error' => $e->getMessage(),
+        'debug_trace' => $e->getTraceAsString(),
+    ];
+}
     }
 
     /**
