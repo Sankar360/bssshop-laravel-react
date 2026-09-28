@@ -865,19 +865,26 @@ class Product extends Model
      * @param array $filters
      * @return array
      */
+        /**
+     * Get filtered products with combined product and variant logic.
+     *
+     * @param array $filters
+     * @return array
+     */
     public function getFilteredProducts(array $filters): array
     {
         try {
-            $categoryId = !empty($filters['category_id']) ? (int) $filters['category_id'] : null;
+            $categoryId    = !empty($filters['category_id']) ? (int) $filters['category_id'] : null;
             $subcategoryId = !empty($filters['subcategory_id']) ? (int) $filters['subcategory_id'] : null;
-            $minPrice = isset($filters['min_price']) ? (float) $filters['min_price'] : null;
-            $maxPrice = isset($filters['max_price']) ? (float) $filters['max_price'] : null;
-            $features = $filters['features'] ?? [];
-            $sort = $filters['sort'] ?? 'latest';
-            $page = max(1, (int) ($filters['page'] ?? 1));
-            $perPage = 12;
-            $offset = ($page - 1) * $perPage;
+            $minPrice      = isset($filters['min_price']) ? (float) $filters['min_price'] : null;
+            $maxPrice      = isset($filters['max_price']) ? (float) $filters['max_price'] : null;
+            $features      = $filters['features'] ?? [];
+            $sort          = $filters['sort'] ?? 'latest';
+            $page          = max(1, (int) ($filters['page'] ?? 1));
+            $perPage       = 12;
+            $offset        = ($page - 1) * $perPage;
 
+            // Non-variant products
             $sql = "SELECT 
                 p.id AS product_id,
                 NULL::integer AS variant_id,
@@ -891,17 +898,17 @@ class Product extends Model
                 p.created_at,
                 p.updated_at,
                 (SELECT pi.image FROM product_images pi 
-                WHERE pi.product_id = p.id 
-                ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS gallery_image,
+                 WHERE pi.product_id = p.id 
+                 ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS gallery_image,
                 p.image AS fallback_image,
                 0 AS has_variants
             FROM products p
             WHERE p.status = 'active' 
-            AND p.stock > 0
-            AND NOT EXISTS (
-                SELECT 1 FROM product_variants pvx 
-                WHERE pvx.product_id = p.id AND pvx.status = 1
-            )";
+              AND p.stock > 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM product_variants pvx 
+                  WHERE pvx.product_id = p.id AND pvx.status = 1
+              )";
 
             $bindings = [];
 
@@ -927,11 +934,11 @@ class Product extends Model
                     }
                     $placeholders = implode(',', array_fill(0, count($valueIds), '?'));
                     $sql .= " AND EXISTS (
-                SELECT 1 FROM product_feature_values pfv
-                WHERE pfv.product_id = p.id
-                AND pfv.feature_id = ?
-                AND pfv.value IN ({$placeholders})
-            )";
+                        SELECT 1 FROM product_feature_values pfv
+                        WHERE pfv.product_id = p.id
+                          AND pfv.feature_id = ?
+                          AND pfv.value IN ({$placeholders})
+                    )";
                     $bindings[] = (int) $featureId;
                     foreach ($valueIds as $vid) {
                         $bindings[] = $vid;
@@ -953,8 +960,8 @@ class Product extends Model
                 p.created_at,
                 p.updated_at,
                 (SELECT vi.image FROM product_variant_images vi 
-                WHERE vi.variant_id = v.id 
-                ORDER BY vi.is_primary DESC, vi.sort_order ASC, vi.id ASC LIMIT 1) AS gallery_image,
+                 WHERE vi.variant_id = v.id 
+                 ORDER BY vi.is_primary DESC, vi.sort_order ASC, vi.id ASC LIMIT 1) AS gallery_image,
                 p.image AS fallback_image,
                 1 AS has_variants
             FROM products p
@@ -979,8 +986,8 @@ class Product extends Model
                 WHERE pv1.status = 1 AND pv1.stock > 0
             ) v ON v.product_id = p.id
             WHERE p.status = 'active' 
-            AND v.status = 1
-            AND v.stock > 0";
+              AND v.status = 1
+              AND v.stock > 0";
 
             $bindingsVariant = [];
 
@@ -1006,11 +1013,11 @@ class Product extends Model
                     }
                     $placeholders = implode(',', array_fill(0, count($valueIds), '?'));
                     $sqlVariant .= " AND EXISTS (
-                SELECT 1 FROM product_variant_values pvv
-                WHERE pvv.variant_id = v.id
-                AND pvv.feature_id = ?
-                AND pvv.value IN ({$placeholders})
-            )";
+                        SELECT 1 FROM product_variant_values pvv
+                        WHERE pvv.variant_id = v.id
+                          AND pvv.feature_id = ?
+                          AND pvv.value IN ({$placeholders})
+                    )";
                     $bindingsVariant[] = (int) $featureId;
                     foreach ($valueIds as $vid) {
                         $bindingsVariant[] = $vid;
@@ -1023,15 +1030,15 @@ class Product extends Model
             $allBindings = array_merge($bindings, $bindingsVariant);
 
             $orderBy = match ($sort) {
-                'oldest' => 'created_at ASC',
-                'price_low' => 'price ASC',
-                'price_high' => 'price DESC',
-                'rating_high' => 'rating DESC',
+                'oldest'        => 'created_at ASC',
+                'price_low'     => 'price ASC',
+                'price_high'    => 'price DESC',
+                'rating_high'   => 'rating DESC',
                 'discount_high' => 'discount DESC',
-                default => 'created_at DESC'
+                default         => 'created_at DESC',
             };
 
-                            $countSql = "SELECT COUNT(*) AS total FROM ({$unionSql}) AS combined";
+            $countSql = "SELECT COUNT(*) AS total FROM ({$unionSql}) AS combined";
             $countResult = DB::select($countSql, $allBindings);
             $total = isset($countResult[0]) ? (int) $countResult[0]->total : 0;
 
@@ -1059,14 +1066,14 @@ class Product extends Model
                     foreach ($featureRows as $fr) {
                         $fr = (array) $fr;
                         $variantFeatures[$fr['variant_id']][] = [
-                            'name' => $fr['feature_name'],
+                            'name'  => $fr['feature_name'],
                             'value' => $fr['feature_value'] ?? '',
                         ];
                     }
                 }
 
                 foreach ($rows as &$row) {
-                    $row['image'] = !empty($row['gallery_image']) ? $row['gallery_image'] : $row['fallback_image'];
+                    $row['image']    = !empty($row['gallery_image']) ? $row['gallery_image'] : $row['fallback_image'];
                     $row['features'] = $row['variant_id'] ? ($variantFeatures[$row['variant_id']] ?? []) : [];
                     unset($row['gallery_image'], $row['fallback_image']);
                 }
@@ -1074,23 +1081,22 @@ class Product extends Model
             }
 
             return [
-                'rows' => $rows,
-                'total' => $total,
-                'per_page' => $perPage,
+                'rows'         => $rows,
+                'total'        => $total,
+                'per_page'     => $perPage,
                 'current_page' => $page,
-                'last_page' => (int) max(1, ceil($total / $perPage)),
+                'last_page'    => (int) max(1, ceil($total / $perPage)),
             ];
-        } atch (\Exception $e) {
-    return [
-        'rows' => [],
-        'total' => 0,
-        'per_page' => 12,
-        'current_page' => 1,
-        'last_page' => 1,
-        'debug_error' => $e->getMessage(),
-        'debug_trace' => $e->getTraceAsString(),
-    ];
-}
+        } catch (\Exception $e) {
+            Log::error('getFilteredProducts error: ' . $e->getMessage());
+            return [
+                'rows'         => [],
+                'total'        => 0,
+                'per_page'     => 12,
+                'current_page' => 1,
+                'last_page'    => 1,
+            ];
+        }
     }
 
     /**
