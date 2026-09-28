@@ -9,7 +9,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY . /var/www/html
 
-RUN composer install --no-interaction --prefer-dist
+RUN composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
 
 RUN printf '%s\n' \
 '<VirtualHost *:80>' \
@@ -24,3 +24,7 @@ RUN printf '%s\n' \
 
 RUN chown -R www-data:www-data /var/www/html/storage \
     /var/www/html/bootstrap/cache
+
+EXPOSE 80
+
+CMD ["apache2-foreground"]
