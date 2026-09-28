@@ -1058,7 +1058,7 @@ class Product extends Model
                     $featureRows = DB::table('product_variant_values as pvv')
                         ->select('pvv.variant_id', 'features.name AS feature_name', 'feature_values.value AS feature_value')
                         ->join('features', 'features.id', '=', 'pvv.feature_id')
-                        ->leftJoin('feature_values', 'feature_values.id', '=', 'pvv.value')
+                        ->leftJoin('feature_values', DB::raw('feature_values.id::text'), '=', 'pvv.value')      
                         ->whereIn('pvv.variant_id', $variantIds)
                         ->get()
                         ->toArray();
