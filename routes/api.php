@@ -127,7 +127,7 @@ Route::prefix('admin')->group(function () {
 // AUTHENTICATED CUSTOMER ROUTES (Sanctum)
 // ============================================================
 
-Route::middleware(['auth:sanctum,admin'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     // Auth
     Route::get('/auth/check', [AuthController::class, 'checkAuth']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
