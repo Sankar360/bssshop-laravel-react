@@ -78,82 +78,76 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Login user.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string|min:6',
-            'remember' => 'nullable|boolean',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string|min:6',
+        'remember' => 'nullable|boolean',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $validator->errors(),
+        ], 422);
+    }
 
-        $credentials = $request->only('email', 'password');
-        $remember = $request->remember ?? false;
+    $credentials = $request->only('email', 'password');
+    $remember = $request->remember ?? false;
 
-        // Attempt login
-        if (!Auth::attempt($credentials, $remember)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid email or password',
-            ], 401);
-        }
+    if (! Auth::attempt($credentials, $remember)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid email or password',
+        ], 401);
+    }
 
-        $user = Auth::user();
+    // ✅ CRITICAL: regenerate session ID to prevent fixation and
+    //    persist the session to the `sessions` table.
+    $request->session()->regenerate();
 
-        // Check if user is active
-        if ($user->status !== 'active') {
-            Auth::logout();
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account is inactive. Please contact support.',
-            ], 403);
-        }
+    $user = Auth::user();
 
-        // Create Sanctum token
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        // Get user preferences
-        $preferences = $this->preferenceModel->getUserPreferences($user->id);
-
-        Log::info('User logged in: ' . $user->email . ' (ID: ' . $user->id . ')');
+    if ($user->status !== 'active') {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json([
-            'success' => true,
-            'message' => 'Welcome back, ' . $user->name . '!',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'avatar' => $user->avatar_url,
-                    'role' => $user->role,
-                    'status' => $user->status,
-                ],
-                'preferences' => [
-                    'theme' => $preferences->theme ?? 'light',
-                    'language' => $preferences->language ?? 'en',
-                    'notifications' => $preferences->notifications ?? 'on',
-                ],
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'is_admin' => $user->role === 'admin',
-            ],
-        ]);
+            'success' => false,
+            'message' => 'Your account is inactive. Please contact support.',
+        ], 403);
     }
+
+    $preferences = $this->preferenceModel->getUserPreferences($user->id);
+
+    Log::info('User logged in: ' . $user->email . ' (ID: ' . $user->id . ')');
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Welcome back, ' . $user->name . '!',
+        'data' => [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'avatar' => $user->avatar_url,
+                'role' => $user->role,
+                'status' => $user->status,
+            ],
+            'preferences' => [
+                'theme' => $preferences->theme ?? 'light',
+                'language' => $preferences->language ?? 'en',
+                'notifications' => $preferences->notifications ?? 'on',
+            ],
+            // NOTE: no `token` field anymore — session cookie handles auth.
+            'is_admin' => $user->role === 'admin',
+        ],
+    ]);
+}
 
     /**
      * Register a new user.
@@ -240,26 +234,25 @@ class AuthController extends Controller
         ], 201);
     }
 
-    /**
-     * Logout user.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function logout(Request $request)
-    {
-        $user = Auth::user();
+{
+    $user = Auth::user();
 
-        if ($user) {
-            Log::info('User logged out: ' . $user->email . ' (ID: ' . $user->id . ')');
-            $user->tokens()->delete();
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'You have been logged out successfully.',
-        ]);
+    if ($user) {
+        Log::info('User logged out: ' . $user->email . ' (ID: ' . $user->id . ')');
+        // Optional: also revoke any old tokens if you keep that code for other clients
+        // $user->tokens()->delete();
     }
+
+    Auth::guard('web')->logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'You have been logged out successfully.',
+    ]);
+}
 
     /**
      * Send password reset link.
