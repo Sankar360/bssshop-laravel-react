@@ -30,6 +30,10 @@ RUN php artisan storage:link || true
 RUN chown -R www-data:www-data /var/www/html/storage \
     /var/www/html/bootstrap/cache
 
+# ✅ Make start.sh executable
+RUN chmod +x /var/www/html/start.sh
+
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+# ✅ Run the startup script (which migrates then starts Apache)
+CMD ["/var/www/html/start.sh"]
