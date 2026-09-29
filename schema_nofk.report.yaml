@@ -1,0 +1,43 @@
+source:
+  schema: "__dmigrate_reverse__:mysql:database=bssshop_laravel"
+  version: "0.0.0-reverse"
+  file: "/work/schema.yaml"
+target:
+  dialect: postgresql
+  generated_at: "2026-09-28T08:04:49.512957029Z"
+  generator: "d-migrate 1.7.1"
+
+summary:
+  statements: 88
+  notes: 5
+  warnings: 5
+  action_required: 0
+  skipped_objects: 0
+
+notes:
+  - type: warning
+    code: W127
+    object: "cache_expiration_index_2"
+    message: "Index 'cache_expiration_index' on table 'ci4_cache' was renamed to 'cache_expiration_index_2' to keep index names unique within the PostgreSQL schema (MySQL allows the same index name on several tables; PostgreSQL index names are schema-global)."
+    hint: "Rename the source index if a specific PostgreSQL name is required."
+  - type: warning
+    code: W127
+    object: "cache_locks_expiration_index_2"
+    message: "Index 'cache_locks_expiration_index' on table 'ci4_cache_locks' was renamed to 'cache_locks_expiration_index_2' to keep index names unique within the PostgreSQL schema (MySQL allows the same index name on several tables; PostgreSQL index names are schema-global)."
+    hint: "Rename the source index if a specific PostgreSQL name is required."
+  - type: warning
+    code: W127
+    object: "jobs_queue_index_2"
+    message: "Index 'jobs_queue_index' on table 'jobs' was renamed to 'jobs_queue_index_2' to keep index names unique within the PostgreSQL schema (MySQL allows the same index name on several tables; PostgreSQL index names are schema-global)."
+    hint: "Rename the source index if a specific PostgreSQL name is required."
+  - type: warning
+    code: W127
+    object: "status_2"
+    message: "Index 'status' on table 'navigation_menus' was renamed to 'status_2' to keep index names unique within the PostgreSQL schema (MySQL allows the same index name on several tables; PostgreSQL index names are schema-global)."
+    hint: "Rename the source index if a specific PostgreSQL name is required."
+  - type: warning
+    code: W127
+    object: "product_id_2"
+    message: "Index 'product_id' on table 'product_specifications' was renamed to 'product_id_2' to keep index names unique within the PostgreSQL schema (MySQL allows the same index name on several tables; PostgreSQL index names are schema-global)."
+    hint: "Rename the source index if a specific PostgreSQL name is required."
+
