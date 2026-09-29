@@ -26,6 +26,7 @@ return [
         'admin/logout',
         'admin/dashboard',
         'admin/check-auth',
+        'cart/*',
     ],
 
     'allowed_methods' => [
