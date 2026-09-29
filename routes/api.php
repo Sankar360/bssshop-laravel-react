@@ -34,19 +34,6 @@ use App\Http\Controllers\Api\SettingController;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/debug/session', function (\Illuminate\Http\Request $request) {
-    return response()->json([
-        'has_session' => $request->hasSession(),
-        'session_id' => $request->hasSession() ? $request->session()->getId() : null,
-        'same_site_config' => config('session.same_site'),
-        'secure_config' => config('session.secure'),
-        'domain_config' => config('session.domain'),
-        'stateful_domains' => config('sanctum.stateful'),
-        'origin' => $request->headers->get('Origin'),
-        'referer' => $request->headers->get('Referer'),
-    ]);
-});
-
 // ============================================================
 // PUBLIC FRONTEND ROUTES
 // ============================================================
