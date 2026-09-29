@@ -27,7 +27,6 @@ use App\Http\Controllers\Api\Admin\AdminProfileController;
 use App\Http\Controllers\Api\Admin\AdminSettingController;
 use App\Http\Controllers\Api\Admin\MenuController;
 use App\Http\Controllers\Api\SettingController;
-use Illuminate\Session\Middleware\StartSession;
 
 /*
 |--------------------------------------------------------------------------
@@ -127,7 +126,7 @@ Route::prefix('admin')->group(function () {
 // AUTHENTICATED CUSTOMER ROUTES (Sanctum)
 // ============================================================
 
-Route::middleware(['auth:sanctum',StartSession::class,])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     // Auth
     Route::get('/auth/check', [AuthController::class, 'checkAuth']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
