@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Models\Cart;   // ← add this at the top
+
 
 class CheckoutController extends Controller
 {
@@ -57,49 +59,211 @@ class CheckoutController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function index()
-    {
-        $cart = Session::get('cart', []);
+{
+    // ✅ Read from DB cart, not session
+    $userId = auth()->id();
 
-        if (empty($cart)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your cart is empty. Please add items before checkout.',
-            ], 422);
-        }
-
-        $cartData = $this->getCartDataForCheckout($cart);
-
-        if (empty($cartData['items'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Some items in your cart are no longer available.',
-            ], 422);
-        }
-
-        $userData    = null;
-        $isLoggedIn  = false;
-
-        if (auth()->check()) {
-            $user       = auth()->user();
-            $userData   = $user->toArray();
-            $isLoggedIn = true;
-        }
-
-        $paymentMethods = $this->getEnabledPaymentMethods();
-
+    if (!$userId) {
         return response()->json([
-            'success' => true,
-            'data' => [
-                'cart_data'         => $cartData,
-                'user_data'         => $userData,
-                'payment_methods'   => $paymentMethods,
-                'razorpay_key'      => $this->razorpayService->isEnabled() ? $this->razorpayService->getKeyId() : null,
-                'razorpay_enabled'  => $this->razorpayService->isEnabled(),
-                'cart_count'        => $this->getCartCount(),
-                'is_logged_in'      => $isLoggedIn,
-            ],
-        ]);
+            'success' => false,
+            'message' => 'Please log in to checkout.',
+        ], 401);
     }
+
+    $cartRows = Cart::where('user_id', $userId)->get();
+
+    if ($cartRows->isEmpty()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Your cart is empty. Please add items before checkout.',
+        ], 422);
+    }
+
+    $cartData = $this->buildCartDataFromRows($cartRows);
+
+    if (empty($cartData['items'])) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Some items in your cart are no longer available.',
+        ], 422);
+    }
+
+    $userData    = null;
+    $isLoggedIn  = false;
+
+    if (auth()->check()) {
+        $user       = auth()->user();
+        $userData   = [
+            'id'          => $user->id,
+            'name'        => $user->name,
+            'email'       => $user->email,
+            'phone'       => $user->phone,
+            'address'     => $user->address ?? '',
+            'city'        => $user->city ?? '',
+            'state'       => $user->state ?? '',
+            'postal_code' => $user->postal_code ?? '',
+            'country'     => $user->country ?? '',
+        ];
+        $isLoggedIn = true;
+    }
+
+    $paymentMethods = $this->getEnabledPaymentMethods();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'cart_data'        => $cartData,
+            'user_data'        => $userData,
+            'payment_methods'  => $paymentMethods,
+            'razorpay_key'     => $this->razorpayService->isEnabled() ? $this->razorpayService->getKeyId() : null,
+            'razorpay_enabled' => $this->razorpayService->isEnabled(),
+            'cart_count'       => $cartRows->sum('quantity'),
+            'is_logged_in'     => $isLoggedIn,
+        ],
+    ]);
+}
+
+/**
+ * Build cart data from `carts` table rows.
+ */
+private function buildCartDataFromRows($cartRows): array
+{
+    $items    = [];
+    $subtotal = 0;
+
+    foreach ($cartRows as $row) {
+        $item = $this->getCartRowDetails($row);
+        if ($item) {
+            $items[]   = $item;
+            $subtotal += $item['price'] * $item['quantity'];
+        }
+    }
+
+    $taxRate           = 10;
+    $tax               = round($subtotal * 0.10, 2);
+    $shippingThreshold = 100;
+    $shipping          = $subtotal > $shippingThreshold ? 0 : 10;
+    $total             = $subtotal + $tax + $shipping;
+
+    return [
+        'items'              => $items,
+        'subtotal'           => $subtotal,
+        'formatted_subtotal' => '₹' . number_format($subtotal, 2),
+        'tax'                => $tax,
+        'tax_rate'           => $taxRate,
+        'formatted_tax'      => '₹' . number_format($tax, 2),
+        'shipping'           => $shipping,
+        'shipping_threshold' => $shippingThreshold,
+        'formatted_shipping' => '₹' . number_format($shipping, 2),
+        'total'              => $total,
+        'formatted_total'    => '₹' . number_format($total, 2),
+    ];
+}
+
+/**
+ * Get cart item details from a `carts` table row.
+ */
+private function getCartRowDetails(Cart $row): ?array
+{
+    $productId = (int) $row->product_id;
+    $variantId = (int) $row->variant_id;
+
+    // ---- Variant product ----
+    if ($variantId > 0) {
+        $variant = ProductVariant::find($variantId);
+        if (!$variant) return null;
+
+        $product = Product::find($variant->product_id);
+        if (!$product) return null;
+
+        // (Keep your existing feature lookup logic — it's fine.)
+        $variantFeatures = ProductVariantValue::select(
+            'product_variant_values.*',
+            'features.name as feature_name',
+            'feature_values.value as option_value'
+        )
+            ->join('features', 'features.id', '=', 'product_variant_values.feature_id')
+            ->leftJoin('feature_values', 'feature_values.id', '=', 'product_variant_values.value')
+            ->where('product_variant_values.variant_id', $variantId)
+            ->get()
+            ->toArray();
+
+        $featureParts  = [];
+        $featureValues = [];
+
+        foreach ($variantFeatures as $feature) {
+            $name  = $feature['feature_name'] ?? '';
+            $value = $feature['option_value'] ?? $feature['value'] ?? '';
+            if ($name && $value) {
+                $featureParts[]   = $value;
+                $featureValues[$name] = $value;
+            }
+        }
+
+        $price = ($variant->sale_price > 0 && $variant->sale_price < $variant->price)
+            ? $variant->sale_price
+            : $variant->price;
+
+        $variantImage = ProductVariantImage::where('variant_id', $variantId)
+            ->orderBy('is_primary', 'DESC')
+            ->orderBy('sort_order', 'ASC')
+            ->first();
+
+        $image = $variantImage->image
+            ?? $variant->image
+            ?? $product->image
+            ?? 'assets/images/default-product.jpg';
+
+        return [
+            'key'                   => $productId . '-' . $variantId,
+            'product_id'            => $product->id,
+            'variant_id'            => $variantId,
+            'name'                  => $product->name,
+            'display_name'          => $product->name . ($featureParts ? ' / ' . implode(' / ', $featureParts) : ''),
+            'variant_features'      => $featureValues,
+            'variant_features_list' => $featureParts,
+            'slug'                  => $variant->slug ?? $product->slug,
+            'image'                 => $image,
+            'price'                 => $price,
+            'formatted_price'       => '₹' . number_format($price, 2),
+            'quantity'              => (int) $row->quantity,
+            'max_qty'               => $variant->stock ?? 0,
+            'is_variant'            => true,
+            'stock'                 => $variant->stock ?? 0,
+            'subtotal'              => $price * $row->quantity,
+            'formatted_subtotal'    => '₹' . number_format($price * $row->quantity, 2),
+        ];
+    }
+
+    // ---- Simple product ----
+    $product = Product::find($productId);
+    if (!$product) return null;
+
+    $price = ($product->sale_price > 0 && $product->sale_price < $product->price)
+        ? $product->sale_price
+        : $product->price;
+
+    return [
+        'key'                   => $productId . '-0',
+        'product_id'            => $product->id,
+        'variant_id'            => 0,
+        'name'                  => $product->name,
+        'display_name'          => $product->name,
+        'variant_features'      => [],
+        'variant_features_list' => [],
+        'slug'                  => $product->slug,
+        'image'                 => $product->image ?? 'assets/images/default-product.jpg',
+        'price'                 => $price,
+        'formatted_price'       => '₹' . number_format($price, 2),
+        'quantity'              => (int) $row->quantity,
+        'max_qty'               => $product->stock ?? 0,
+        'is_variant'            => false,
+        'stock'                 => $product->stock ?? 0,
+        'subtotal'              => $price * $row->quantity,
+        'formatted_subtotal'    => '₹' . number_format($price * $row->quantity, 2),
+    ];
+}
+
 
     /* =================================================================
      |  CART HELPERS
@@ -317,15 +481,18 @@ class CheckoutController extends Controller
             }
         }
 
-        $cart = Session::get('cart', []);
-        if (empty($cart)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your cart is empty.',
-            ], 422);
+        $userId = auth()->id();
+        if (!$userId) {
+            return response()->json(['success' => false, 'message' => 'Please log in.'], 401);
         }
 
-        $cartData = $this->getCartDataForCheckout($cart);
+        $cartRows = Cart::where('user_id', $userId)->get();
+        if ($cartRows->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Your cart is empty.'], 422);
+        }
+
+        $cartData = $this->getCartDataForCheckout($cartRows);
+
         if (empty($cartData['items'])) {
             return response()->json([
                 'success' => false,
@@ -487,6 +654,9 @@ class CheckoutController extends Controller
             'payment_status'      => 'paid',
             'order_status'        => 'confirmed',
         ]);
+
+        Cart::where('user_id', $order->user_id)->delete();
+        Log::info('Cart cleared for user ' . $order->user_id . ' after payment');
 
         Log::debug('verifyPayment - Order updated successfully');
 
