@@ -39,6 +39,8 @@ class OrderItem extends Model
         'subtotal',
         'shipping',
         'tax',
+        'created_at',
+    'updated_at',   // ← add back
     ];
 
     /**
@@ -57,6 +59,7 @@ class OrderItem extends Model
         'shipping' => 'decimal:2',
         'tax' => 'decimal:2',
         'created_at' => 'datetime',
+        'updated_at' => 'datetime',   // ← add back
     ];
 
     /**
@@ -65,8 +68,6 @@ class OrderItem extends Model
      * @var bool
      */
     public $timestamps = false;
-
-        const UPDATED_AT = null;            // ← ✅ THE FIX: disable only updated_at
 
     /**
      * The attributes that should be hidden for serialization.
