@@ -15,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
 
+        // ✅ Ensure CORS runs globally (esp. for preflight OPTIONS)
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
+
+        // ✅ Trust all proxies (Render terminates TLS at their edge)
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'super_admin' => \App\Http\Middleware\SuperAdminOnly::class,
