@@ -192,64 +192,55 @@ class OrdersController extends Controller
         $items = $this->orderItemModel->where('order_id', $orderId)->get()->toArray();
 
         foreach ($items as &$item) {
-            // Get product details
+            // --- Product ---------------------------------------------------
             $product = Product::find($item['product_id']);
-            $item['product_name'] = $product->name ?? 'Unknown Product';
+            $item['product_name']  = $product->name  ?? 'Unknown Product';
             $item['product_image'] = $product->image ?? null;
 
-            // Check if it's a variant
+            // Defaults
+            $item['is_variant']            = false;
+            $item['variant_features']      = [];
+            $item['variant_features_list'] = [];
+            $item['variant_sku']           = '';
+            $item['variant_display_name']  = $item['product_name'];
+
+            // --- Variant ---------------------------------------------------
             if (!empty($item['variant_id']) && $item['variant_id'] > 0) {
                 $variant = ProductVariant::find($item['variant_id']);
 
                 if ($variant) {
-                    // Get variant features
-                    $variantFeatures = ProductVariantValue::select(
-                        'product_variant_values.*',
-                        'features.name as feature_name',
-                        'feature_values.value as option_value'
-                    )
-                        ->join(
-                            'features',
-                            'features.id',
-                            '=',
-                            'product_variant_values.feature_id'
-                        )
-                        ->leftJoin(
-                            'feature_values',
-                            'feature_values.id',
-                            '=',
-                            'product_variant_values.value'
-                        )
-                        ->where('product_variant_values.variant_id', $item['variant_id'])
-                        ->get()
-                        ->toArray();
+                    $item['is_variant']  = true;
+                    $item['variant_sku'] = $variant->sku ?? '';
 
-                    $featureParts = [];
+                    // Feature values — portable query, no cross-type join
+                    $featureRows = \DB::table('product_variant_values as pvv')
+                        ->join('features as f', 'f.id', '=', 'pvv.feature_id')
+                        ->where('pvv.variant_id', $item['variant_id'])
+                        ->select('f.name as feature_name', 'pvv.value as feature_value')
+                        ->get();
+
+                    $featureParts  = [];
                     $featureValues = [];
-
-                    foreach ($variantFeatures as $feature) {
-                        $featureName = $feature['feature_name'] ?? '';
-                        $featureValue = $feature['option_value'] ?? $feature['value'] ?? '';
-
-                        if (!empty($featureName) && !empty($featureValue)) {
-                            $featureParts[] = $featureValue;
-                            $featureValues[$featureName] = $featureValue;
+                    foreach ($featureRows as $fr) {
+                        $name  = $fr->feature_name;
+                        $value = $fr->feature_value;
+                        if ($name && $value) {
+                            $featureParts[]       = $value;
+                            $featureValues[$name] = $value;
                         }
                     }
 
-                    $item['variant_features'] = $featureValues;
+                    $item['variant_features']      = $featureValues;
                     $item['variant_features_list'] = $featureParts;
-                    $item['is_variant'] = true;
-                    $item['variant_sku'] = $variant->sku ?? '';
-                    $item['variant_display_name'] = $product->name ?? 'Unknown Product' . (!empty($featureParts) ? ' / ' . implode(' / ', $featureParts) : '');
+                    $item['variant_display_name']  = $item['product_name']
+                        . (!empty($featureParts) ? ' / ' . implode(' / ', $featureParts) : '');
 
-                    // Get variant image
-                    $variantImage = ProductVariantImage::where('variant_id', $item['variant_id'])
-                        ->orderBy('is_primary', 'DESC')
-                        ->orderBy('sort_order', 'ASC')
+                    // Variant image — safe with `find` since we only need one
+                    $variantImage = \DB::table('product_variant_images')
+                        ->where('variant_id', $item['variant_id'])
                         ->first();
 
-                    if ($variantImage) {
+                    if ($variantImage && !empty($variantImage->image)) {
                         $item['product_image'] = $variantImage->image;
                     } elseif (!empty($variant->image)) {
                         $item['product_image'] = $variant->image;
@@ -259,21 +250,9 @@ class OrdersController extends Controller
                     $item['price'] = ($variant->sale_price > 0 && $variant->sale_price < $variant->price)
                         ? $variant->sale_price
                         : $variant->price;
-                } else {
-                    $item['is_variant'] = false;
-                    $item['variant_features'] = [];
-                    $item['variant_features_list'] = [];
-                    $item['variant_sku'] = '';
-                    $item['variant_display_name'] = $product->name ?? 'Unknown Product';
                 }
             } else {
-                $item['is_variant'] = false;
-                $item['variant_features'] = [];
-                $item['variant_features_list'] = [];
-                $item['variant_sku'] = '';
-                $item['variant_display_name'] = $product->name ?? 'Unknown Product';
-
-                // Use product price with sale price
+                // Non-variant product — apply sale price if any
                 if (!empty($product->sale_price) && $product->sale_price > 0 && $product->sale_price < $product->price) {
                     $item['price'] = $product->sale_price;
                 }
