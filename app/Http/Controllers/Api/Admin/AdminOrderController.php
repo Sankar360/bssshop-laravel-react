@@ -219,28 +219,20 @@ class AdminOrderController extends Controller
                 if ($variant) {
                     // Get variant features/options
                     // Get variant features/options
-$variantFeatures = $this->variantValueModel
-    ->select(
-        'product_variant_values.*',
-        'features.name as feature_name',
-        'feature_values.value as option_value'
-    )
-    ->join('features', 'features.id', '=', 'product_variant_values.feature_id')
-    ->leftJoin('feature_values', 'feature_values.id', '=', 'product_variant_values.value')
-    ->where('product_variant_values.variant_id', $item['variant_id'])
-    ->get()
-    ->toArray();
+                    $featureRows = \DB::table('product_variant_values as pvv')
+                        ->join('features as f', 'f.id', '=', 'pvv.feature_id')
+                        ->where('pvv.variant_id', $item['variant_id'])
+                        ->select('f.name as feature_name', 'pvv.value as feature_value')
+                        ->get();
 
-                    $featureParts = [];
+                    $featureParts  = [];
                     $featureValues = [];
-
-                    foreach ($variantFeatures as $feature) {
-                        $featureName = $feature['feature_name'] ?? '';
-                        $featureValue = $feature['option_value'] ?? $feature['value'] ?? '';
-
-                        if (!empty($featureName) && !empty($featureValue)) {
-                            $featureParts[] = $featureValue;
-                            $featureValues[$featureName] = $featureValue;
+                    foreach ($featureRows as $fr) {
+                        $name  = $fr->feature_name;
+                        $value = $fr->feature_value;
+                        if ($name && $value) {
+                            $featureParts[]       = $value;
+                            $featureValues[$name] = $value;
                         }
                     }
 
