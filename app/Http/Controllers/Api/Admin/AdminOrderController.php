@@ -220,16 +220,34 @@ class AdminOrderController extends Controller
                     // Get variant features/options
                     // Get variant features/options
                     $featureRows = \DB::table('product_variant_values as pvv')
-                        ->join('features as f', 'f.id', '=', 'pvv.feature_id')
-                        ->where('pvv.variant_id', $item['variant_id'])
-                        ->select('f.name as feature_name', 'pvv.value as feature_value')
-                        ->get();
+                    ->join('features as f', 'f.id', '=', 'pvv.feature_id')
+                    ->where('pvv.variant_id', $item['variant_id'])
+                    ->select('f.id as feature_id', 'f.name as feature_name', 'pvv.value as feature_value')
+                    ->get();
+
+                    // Preload all feature_values for the features used by this variant
+                    $featureIds = $featureRows->pluck('feature_id')->unique()->filter()->values()->toArray();
+                    $featureValueMap = [];
+                    if (!empty($featureIds)) {
+                        $fvRows = \DB::table('feature_values')
+                            ->whereIn('feature_id', $featureIds)
+                            ->get(['id', 'feature_id', 'value']);
+
+                        foreach ($fvRows as $fv) {
+                            // key: feature_id + ":" + feature_values.id
+                            $featureValueMap[$fv->feature_id . ':' . $fv->id] = $fv->value;
+                        }
+                    }
 
                     $featureParts  = [];
                     $featureValues = [];
                     foreach ($featureRows as $fr) {
-                        $name  = $fr->feature_name;
-                        $value = $fr->feature_value;
+                        $name = $fr->feature_name;
+                        $raw  = $fr->feature_value;
+
+                        // Try to resolve the raw value to a human-readable value
+                        $value = $featureValueMap[$fr->feature_id . ':' . $raw] ?? $raw;
+
                         if ($name && $value) {
                             $featureParts[]       = $value;
                             $featureValues[$name] = $value;
