@@ -3,72 +3,44 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cart;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantValue;
 use App\Models\ProductVariantImage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class CartController extends Controller
 {
-    /**
-     * @var Product
-     */
     protected $productModel;
-
-    /**
-     * @var ProductVariant
-     */
     protected $variantModel;
-
-    /**
-     * @var ProductVariantValue
-     */
     protected $variantValueModel;
-
-    /**
-     * @var ProductVariantImage
-     */
     protected $variantImageModel;
+    protected $cartModel;
 
-    /**
-     * CartController constructor.
-     */
     public function __construct()
     {
         $this->productModel = new Product();
         $this->variantModel = new ProductVariant();
         $this->variantValueModel = new ProductVariantValue();
         $this->variantImageModel = new ProductVariantImage();
+        $this->cartModel = new Cart();
     }
 
     /**
-     * Get cart details with items and totals.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * GET /api/cart
      */
     public function index()
     {
-        $cart = Session::get('cart', []);
-        $cartItems = [];
-        $subtotal = 0;
+        $userId = Auth::id();
+        $cartItems = $this->buildCartItems($userId);
+        $subtotal = array_sum(array_column($cartItems, 'subtotal'));
 
-        if (!empty($cart)) {
-            foreach ($cart as $key => $item) {
-                $cartItem = $this->getCartItemDetails($key, $item);
-                if ($cartItem) {
-                    $cartItems[] = $cartItem;
-                    $subtotal += $cartItem['price'] * $cartItem['quantity'];
-                }
-            }
-        }
-
-        // Calculate totals
-        $tax = $subtotal * 0.10; // 10% tax
-        $shipping = $subtotal > 100 ? 0 : 10; // Free shipping over $100
+        $tax = round($subtotal * 0.10, 2);
+        $shipping = $subtotal > 100 ? 0 : 10;
         $total = $subtotal + $tax + $shipping;
 
         return response()->json([
@@ -76,14 +48,14 @@ class CartController extends Controller
             'data' => [
                 'cart_items' => $cartItems,
                 'subtotal' => $subtotal,
-                'formatted_subtotal' => '$' . number_format($subtotal, 2),
+                'formatted_subtotal' => '₹' . number_format($subtotal, 2),
                 'tax' => $tax,
-                'formatted_tax' => '$' . number_format($tax, 2),
+                'formatted_tax' => '₹' . number_format($tax, 2),
                 'shipping' => $shipping,
-                'formatted_shipping' => '$' . number_format($shipping, 2),
+                'formatted_shipping' => '₹' . number_format($shipping, 2),
                 'total' => $total,
-                'formatted_total' => '$' . number_format($total, 2),
-                'cart_count' => $this->getCartCount(),
+                'formatted_total' => '₹' . number_format($total, 2),
+                'cart_count' => $this->getCartCount($userId),
                 'free_shipping_threshold' => 100,
                 'shipping_threshold_met' => $subtotal >= 100,
             ],
@@ -91,136 +63,14 @@ class CartController extends Controller
     }
 
     /**
-     * Get cart item details.
-     *
-     * @param string $key
-     * @param array $item
-     * @return array|null
-     */
-    private function getCartItemDetails(string $key, array $item): ?array
-    {
-        // Check if it's a variant
-        if (isset($item['variant_id']) && $item['variant_id'] > 0) {
-            $variant = $this->variantModel->find($item['variant_id']);
-            if (!$variant) {
-                return null;
-            }
-
-            $product = $this->productModel->find($variant->product_id);
-            if (!$product) {
-                return null;
-            }
-
-            // Get variant features
-            $variantFeatures = $this->variantValueModel
-                ->select(
-                    'product_variant_values.*',
-                    'features.name as feature_name',
-                    'feature_values.value as option_value'
-                )
-                ->join(
-                    'features',
-                    'features.id',
-                    '=',
-                    'product_variant_values.feature_id'
-                )
-                ->leftJoin(
-                    'feature_values',
-                    'feature_values.id',
-                    '=',
-                    'product_variant_values.value'
-                )
-                ->where('variant_id', $item['variant_id'])
-                ->get()
-                ->toArray();
-
-            $featureParts = [];
-            $featureValues = [];
-
-            foreach ($variantFeatures as $feature) {
-                $featureName = $feature['feature_name'] ?? '';
-                $featureValue = $feature['option_value'] ?? $feature['value'] ?? '';
-
-                if (!empty($featureName) && !empty($featureValue)) {
-                    $featureParts[] = $featureValue;
-                    $featureValues[$featureName] = $featureValue;
-                }
-            }
-
-            $price = ($variant->sale_price > 0) ? $variant->sale_price : $variant->price;
-
-            // Get variant image
-            $variantImage = $this->variantImageModel->where('variant_id', $item['variant_id'])
-                ->orderBy('is_primary', 'DESC')
-                ->orderBy('sort_order', 'ASC')
-                ->first();
-
-            $image = $variantImage->image ?? $variant->image ?? $product->image ?? 'assets/images/default-product.jpg';
-
-            return [
-                'key' => $key,
-                'product_id' => $product->id,
-                'variant_id' => $item['variant_id'],
-                'name' => $product->name,
-                'variant_name' => $product->name,
-                'display_name' => $product->name . (!empty($featureParts) ? ' / ' . implode(' / ', $featureParts) : ''),
-                'variant_features' => $featureValues,
-                'variant_features_list' => $featureParts,
-                'slug' => $variant->slug ?? $product->slug,
-                'image' => $image,
-                'price' => $price,
-                'formatted_price' => '$' . number_format($price, 2),
-                'quantity' => $item['quantity'],
-                'max_qty' => $variant->stock ?? 0,
-                'is_variant' => true,
-                'stock' => $variant->stock ?? 0,
-                'subtotal' => $price * $item['quantity'],
-                'formatted_subtotal' => '$' . number_format($price * $item['quantity'], 2),
-            ];
-        }
-
-        // Simple product
-        $product = $this->productModel->find($item['product_id']);
-        if (!$product) {
-            return null;
-        }
-
-        $price = ($product->sale_price > 0) ? $product->sale_price : $product->price;
-
-        return [
-            'key' => $key,
-            'product_id' => $product->id,
-            'variant_id' => 0,
-            'name' => $product->name,
-            'variant_name' => '',
-            'display_name' => $product->name,
-            'variant_features' => [],
-            'variant_features_list' => [],
-            'slug' => $product->slug,
-            'image' => $product->image ?? 'assets/images/default-product.jpg',
-            'price' => $price,
-            'formatted_price' => '$' . number_format($price, 2),
-            'quantity' => $item['quantity'],
-            'max_qty' => $product->stock ?? 0,
-            'is_variant' => false,
-            'stock' => $product->stock ?? 0,
-            'subtotal' => $price * $item['quantity'],
-            'formatted_subtotal' => '$' . number_format($price * $item['quantity'], 2),
-        ];
-    }
-
-    /**
-     * Add product to cart.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * POST /api/cart/add
      */
     public function add(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'product_id' => 'required|integer|exists:products,id',
-            'variant_id' => 'nullable|integer|exists:product_variants,id',
-            'quantity' => 'nullable|integer|min:1',
+            'variant_id' => 'nullable|integer',
+            'quantity'   => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -231,153 +81,106 @@ class CartController extends Controller
             ], 422);
         }
 
-        $productId = $request->product_id;
-        $variantId = $request->variant_id;
+        $userId = Auth::id();
+        $productId = (int) $request->product_id;
+        $variantId = (int) ($request->variant_id ?? 0);
         $quantity = (int) ($request->quantity ?? 1);
 
-        // If variant_id is provided, add variant
-        if ($variantId && $variantId > 0) {
-            return $this->addVariant($variantId, $quantity, $productId);
-        }
+        // If variant_id is 0 but product has variants, auto-pick the first available
+        if ($variantId === 0) {
+            $hasVariants = $this->variantModel
+                ->where('product_id', $productId)
+                ->where('status', 1)
+                ->exists();
 
-        // Otherwise add simple product
-        $product = $this->productModel->find($productId);
-        if (!$product) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Product not found.',
-            ], 404);
-        }
+            if ($hasVariants) {
+                $firstVariant = $this->variantModel
+                    ->where('product_id', $productId)
+                    ->where('status', 1)
+                    ->where('stock', '>', 0)
+                    ->orderBy('id')
+                    ->first();
 
-        // Check if product has variants
-        $hasVariants = $this->variantModel->where('product_id', $productId)
-            ->where('status', 1)
-            ->exists();
+                if (!$firstVariant) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No available variants in stock.',
+                        'has_variants' => true,
+                        'out_of_stock' => true,
+                    ], 422);
+                }
 
-        if ($hasVariants) {
-            // Auto-select first available variant
-            $firstVariant = $this->productModel->getFirstAvailableVariant($productId);
-
-            if ($firstVariant) {
-                return $this->addVariant($firstVariant['id'], $quantity, $productId);
+                $variantId = (int) $firstVariant->id;
             }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'No available variants in stock.',
-                'has_variants' => true,
-                'out_of_stock' => true,
-            ], 422);
         }
 
-        // Check stock for simple product
-        if ($product->stock < $quantity) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Insufficient stock. Available: ' . $product->stock,
-            ], 422);
-        }
-
-        $cart = Session::get('cart', []);
-        $key = 'product_' . $productId;
-
-        if (isset($cart[$key])) {
-            $newQuantity = $cart[$key]['quantity'] + $quantity;
-            if ($product->stock < $newQuantity) {
+        // Validate stock
+        if ($variantId > 0) {
+            $variant = $this->variantModel->find($variantId);
+            if (!$variant || $variant->stock < $quantity) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Insufficient stock. Available: ' . $product->stock,
+                    'message' => 'Insufficient stock. Available: ' . ($variant->stock ?? 0),
                 ], 422);
             }
-            $cart[$key]['quantity'] = $newQuantity;
         } else {
-            $cart[$key] = [
-                'product_id' => $productId,
-                'quantity' => $quantity,
-                'variant_id' => 0,
-            ];
+            $product = $this->productModel->find($productId);
+            if (!$product || $product->stock < $quantity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient stock. Available: ' . ($product->stock ?? 0),
+                ], 422);
+            }
         }
 
-        Session::put('cart', $cart);
+        // Upsert into carts
+        $row = $this->cartModel
+            ->where('user_id', $userId)
+            ->where('product_id', $productId)
+            ->where('variant_id', $variantId)
+            ->first();
 
-        Log::info('Product added to cart: ' . $productId . ' x ' . $quantity);
+        if ($row) {
+            $newQty = $row->quantity + $quantity;
+
+            // Stock check for new quantity
+            $max = $variantId > 0
+                ? ($this->variantModel->find($variantId)->stock ?? 0)
+                : ($this->productModel->find($productId)->stock ?? 0);
+
+            if ($newQty > $max) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient stock. Available: ' . $max,
+                ], 422);
+            }
+
+            $row->update(['quantity' => $newQty]);
+        } else {
+            $this->cartModel->create([
+                'user_id'    => $userId,
+                'product_id' => $productId,
+                'variant_id' => $variantId,
+                'quantity'   => $quantity,
+            ]);
+        }
+
+        Log::info("Cart add: user={$userId} product={$productId} variant={$variantId} qty={$quantity}");
 
         return response()->json([
             'success' => true,
             'message' => 'Product added to cart successfully.',
-            'cart_count' => $this->getCartCount(),
+            'cart_count' => $this->getCartCount($userId),
         ]);
     }
 
     /**
-     * Add variant to cart.
-     *
-     * @param int $variantId
-     * @param int $quantity
-     * @param int $productId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    private function addVariant(int $variantId, int $quantity, int $productId)
-    {
-        $variant = $this->variantModel->find($variantId);
-        $product = $this->productModel->find($productId);
-
-        if (!$variant) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Variant not found.',
-            ], 404);
-        }
-
-        // Check stock
-        if ($variant->stock < $quantity) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Insufficient stock. Available: ' . $variant->stock,
-            ], 422);
-        }
-
-        $cart = Session::get('cart', []);
-        $key = 'variant_' . $variantId;
-
-        if (isset($cart[$key])) {
-            $newQuantity = $cart[$key]['quantity'] + $quantity;
-            if ($variant->stock < $newQuantity) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Insufficient stock. Available: ' . $variant->stock,
-                ], 422);
-            }
-            $cart[$key]['quantity'] = $newQuantity;
-        } else {
-            $cart[$key] = [
-                'product_id' => $variant->product_id,
-                'variant_id' => $variantId,
-                'quantity' => $quantity,
-            ];
-        }
-
-        Session::put('cart', $cart);
-
-        Log::info('Variant added to cart: ' . $variantId . ' x ' . $quantity);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Variant added to cart successfully.',
-            'cart_count' => $this->getCartCount(),
-        ]);
-    }
-
-    /**
-     * Update cart item quantity.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * POST /api/cart/update
      */
     public function update(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'key' => 'required|string',
+            'key'      => 'required|string',
             'quantity' => 'required|integer|min:0',
         ]);
 
@@ -389,84 +192,74 @@ class CartController extends Controller
             ], 422);
         }
 
-        $key = $request->key;
-        $quantity = (int) $request->quantity;
+        $userId = Auth::id();
+        [$productId, $variantId] = $this->parseKey($request->key);
 
-        $cart = Session::get('cart', []);
+        $row = $this->cartModel
+            ->where('user_id', $userId)
+            ->where('product_id', $productId)
+            ->where('variant_id', $variantId)
+            ->first();
 
-        if (!isset($cart[$key])) {
+        if (!$row) {
             return response()->json([
                 'success' => false,
                 'message' => 'Item not found in cart.',
             ], 404);
         }
 
-        if ($quantity <= 0) {
-            unset($cart[$key]);
-            Session::put('cart', $cart);
+        $qty = (int) $request->quantity;
 
+        if ($qty <= 0) {
+            $row->delete();
             return response()->json([
                 'success' => true,
                 'message' => 'Item removed from cart.',
-                'cart_count' => $this->getCartCount(),
+                'cart_count' => $this->getCartCount($userId),
             ]);
         }
 
-        // Check stock
-        $item = $cart[$key];
-        if (isset($item['variant_id']) && $item['variant_id'] > 0) {
-            $variant = $this->variantModel->find($item['variant_id']);
-            if ($variant && $variant->stock < $quantity) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Insufficient stock. Available: ' . $variant->stock,
-                ], 422);
-            }
-        } else {
-            $product = $this->productModel->find($item['product_id']);
-            if ($product && $product->stock < $quantity) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Insufficient stock. Available: ' . $product->stock,
-                ], 422);
-            }
+        // Stock check
+        $max = $variantId > 0
+            ? ($this->variantModel->find($variantId)->stock ?? 0)
+            : ($this->productModel->find($productId)->stock ?? 0);
+
+        if ($qty > $max) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient stock. Available: ' . $max,
+            ], 422);
         }
 
-        $cart[$key]['quantity'] = $quantity;
-        Session::put('cart', $cart);
+        $row->update(['quantity' => $qty]);
 
-        // Get updated cart details
-        $cartItem = $this->getCartItemDetails($key, $cart[$key]);
-        $subtotal = $this->calculateSubtotal($cart);
+        // Return fresh totals
+        $cartItems = $this->buildCartItems($userId);
+        $subtotal = array_sum(array_column($cartItems, 'subtotal'));
+        $tax = round($subtotal * 0.10, 2);
+        $shipping = $subtotal > 100 ? 0 : 10;
 
         return response()->json([
             'success' => true,
             'message' => 'Cart updated successfully.',
-            'cart_count' => $this->getCartCount(),
-            'item' => $cartItem,
+            'cart_count' => $this->getCartCount($userId),
             'subtotal' => $subtotal,
-            'formatted_subtotal' => '$' . number_format($subtotal, 2),
-            'tax' => $subtotal * 0.10,
-            'formatted_tax' => '$' . number_format($subtotal * 0.10, 2),
-            'shipping' => $subtotal > 100 ? 0 : 10,
-            'formatted_shipping' => '$' . number_format($subtotal > 100 ? 0 : 10, 2),
-            'total' => $subtotal + ($subtotal * 0.10) + ($subtotal > 100 ? 0 : 10),
-            'formatted_total' => '$' . number_format($subtotal + ($subtotal * 0.10) + ($subtotal > 100 ? 0 : 10), 2),
+            'formatted_subtotal' => '₹' . number_format($subtotal, 2),
+            'tax' => $tax,
+            'formatted_tax' => '₹' . number_format($tax, 2),
+            'shipping' => $shipping,
+            'formatted_shipping' => '₹' . number_format($shipping, 2),
+            'total' => $subtotal + $tax + $shipping,
+            'formatted_total' => '₹' . number_format($subtotal + $tax + $shipping, 2),
         ]);
     }
 
     /**
-     * Remove item from cart.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * POST /api/cart/remove
      */
     public function remove(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'key' => 'required|string',
-        ]);
-
+        $validator = Validator::make($request->all(), ['key' => 'required|string']);
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -475,67 +268,36 @@ class CartController extends Controller
             ], 422);
         }
 
-        $key = $request->key;
+        $userId = Auth::id();
+        [$productId, $variantId] = $this->parseKey($request->key);
 
-        Log::debug('Remove cart key received: ' . $key);
+        $deleted = $this->cartModel
+            ->where('user_id', $userId)
+            ->where('product_id', $productId)
+            ->where('variant_id', $variantId)
+            ->delete();
 
-        if (empty($key)) {
+        if (!$deleted) {
             return response()->json([
                 'success' => false,
-                'message' => 'No item key provided.',
-            ], 422);
-        }
-
-        $cart = Session::get('cart', []);
-
-        Log::debug('Current cart keys: ' . implode(', ', array_keys($cart)));
-
-        // Check if key exists directly
-        if (isset($cart[$key])) {
-            unset($cart[$key]);
-            Session::put('cart', $cart);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Item removed from cart.',
-                'cart_count' => $this->getCartCount(),
-            ]);
-        }
-
-        // Try to find the key with different variations
-        $foundKey = null;
-        foreach (array_keys($cart) as $cartKey) {
-            if (trim($cartKey) === trim($key)) {
-                $foundKey = $cartKey;
-                break;
-            }
-        }
-
-        if ($foundKey !== null) {
-            unset($cart[$foundKey]);
-            Session::put('cart', $cart);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Item removed from cart.',
-                'cart_count' => $this->getCartCount(),
-            ]);
+                'message' => 'Item not found in cart.',
+            ], 404);
         }
 
         return response()->json([
-            'success' => false,
-            'message' => 'Item not found in cart. Please refresh and try again.',
-        ], 404);
+            'success' => true,
+            'message' => 'Item removed from cart.',
+            'cart_count' => $this->getCartCount($userId),
+        ]);
     }
 
     /**
-     * Clear cart.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * POST /api/cart/clear
      */
     public function clear()
     {
-        Session::forget('cart');
+        $userId = Auth::id();
+        $this->cartModel->where('user_id', $userId)->delete();
 
         return response()->json([
             'success' => true,
@@ -545,195 +307,191 @@ class CartController extends Controller
     }
 
     /**
-     * Get cart count.
-     *
-     * @return int
-     */
-    protected function getCartCount(): int
-    {
-        $cart = Session::get('cart', []);
-        return array_sum(array_column($cart, 'quantity'));
-    }
-
-    /**
-     * Calculate subtotal.
-     *
-     * @param array $cart
-     * @return float
-     */
-    private function calculateSubtotal(array $cart): float
-    {
-        $subtotal = 0;
-
-        foreach ($cart as $item) {
-            if (isset($item['variant_id']) && $item['variant_id'] > 0) {
-                $variant = $this->variantModel->find($item['variant_id']);
-                if ($variant) {
-                    $price = ($variant->sale_price > 0) ? $variant->sale_price : $variant->price;
-                    $subtotal += $price * $item['quantity'];
-                }
-            } else {
-                $product = $this->productModel->find($item['product_id']);
-                if ($product) {
-                    $price = ($product->sale_price > 0) ? $product->sale_price : $product->price;
-                    $subtotal += $price * $item['quantity'];
-                }
-            }
-        }
-
-        return $subtotal;
-    }
-
-    /**
-     * Get cart summary (for header/badge).
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * GET /api/cart/summary
      */
     public function summary()
     {
-        $cart = Session::get('cart', []);
-        $count = $this->getCartCount();
-        $subtotal = $this->calculateSubtotal($cart);
+        $userId = Auth::id();
+        $items = $this->buildCartItems($userId);
+        $subtotal = array_sum(array_column($items, 'subtotal'));
 
         return response()->json([
             'success' => true,
             'data' => [
-                'count' => $count,
+                'count' => $this->getCartCount($userId),
                 'subtotal' => $subtotal,
-                'formatted_subtotal' => '$' . number_format($subtotal, 2),
+                'formatted_subtotal' => '₹' . number_format($subtotal, 2),
             ],
         ]);
     }
 
     /**
-     * Check if cart has items.
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * GET /api/cart/has-items
      */
     public function hasItems()
     {
-        $cart = Session::get('cart', []);
-        $hasItems = !empty($cart);
-
+        $userId = Auth::id();
         return response()->json([
             'success' => true,
             'data' => [
-                'has_items' => $hasItems,
-                'count' => $this->getCartCount(),
+                'has_items' => $this->getCartCount($userId) > 0,
+                'count' => $this->getCartCount($userId),
             ],
         ]);
     }
 
     /**
-     * Get cart items only (without totals).
-     *
-     * @return \Illuminate\Http\JsonResponse
+     * GET /api/cart/items
      */
     public function items()
     {
-        $cart = Session::get('cart', []);
-        $cartItems = [];
-
-        if (!empty($cart)) {
-            foreach ($cart as $key => $item) {
-                $cartItem = $this->getCartItemDetails($key, $item);
-                if ($cartItem) {
-                    $cartItems[] = $cartItem;
-                }
-            }
-        }
-
+        $userId = Auth::id();
+        $items = $this->buildCartItems($userId);
         return response()->json([
             'success' => true,
-            'data' => $cartItems,
-            'count' => $this->getCartCount(),
+            'data' => $items,
+            'count' => $this->getCartCount($userId),
         ]);
     }
 
+    // -----------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------
+
     /**
-     * Move wishlist item to cart.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * Build cart items with product/variant details.
+     * Key format: "{productId}-{variantId}" (e.g., "21-11" or "23-0").
      */
+    private function buildCartItems(int $userId): array
+    {
+        $rows = $this->cartModel->where('user_id', $userId)->get();
+        $out = [];
+
+        foreach ($rows as $row) {
+            $product = $this->productModel->find($row->product_id);
+            if (!$product) continue;
+
+            $variantId = (int) $row->variant_id;
+            $isVariant = $variantId > 0;
+            $variant = $isVariant ? $this->variantModel->find($variantId) : null;
+
+            // Price: variant sale > variant price > product sale > product price
+            if ($isVariant && $variant) {
+                $price = ($variant->sale_price > 0) ? $variant->sale_price : $variant->price;
+            } else {
+                $price = ($product->sale_price > 0) ? $product->sale_price : $product->price;
+            }
+
+            // Feature values (portable lookup)
+            $featureParts = [];
+            $featureValues = [];
+            if ($isVariant) {
+                $featureRows = \DB::table('product_variant_values as pvv')
+                    ->join('features as f', 'f.id', '=', 'pvv.feature_id')
+                    ->where('pvv.variant_id', $variantId)
+                    ->select('f.id as feature_id', 'f.name as feature_name', 'pvv.value as feature_value')
+                    ->get();
+
+                $featureIds = $featureRows->pluck('feature_id')->unique()->filter()->values()->toArray();
+                $valueMap = [];
+                if (!empty($featureIds)) {
+                    foreach (\DB::table('feature_values')->whereIn('feature_id', $featureIds)->get(['id', 'feature_id', 'value']) as $fv) {
+                        $valueMap[$fv->feature_id . ':' . $fv->id] = $fv->value;
+                    }
+                }
+
+                foreach ($featureRows as $fr) {
+                    $name = $fr->feature_name;
+                    $value = $valueMap[$fr->feature_id . ':' . $fr->feature_value] ?? $fr->feature_value;
+                    if ($name && $value) {
+                        $featureParts[] = $value;
+                        $featureValues[$name] = $value;
+                    }
+                }
+            }
+
+            // Image
+            $image = null;
+            if ($isVariant) {
+                $variantImage = \DB::table('product_variant_images')
+                    ->where('variant_id', $variantId)
+                    ->first();
+                $image = $variantImage->image ?? $variant->image ?? $product->image ?? null;
+            } else {
+                $image = $product->image ?? null;
+            }
+
+            $subtotal = $price * $row->quantity;
+
+            $out[] = [
+                'key'                   => $row->product_id . '-' . $variantId,
+                'cart_id'               => $row->id,
+                'product_id'            => $product->id,
+                'variant_id'            => $variantId,
+                'name'                  => $product->name,
+                'variant_name'          => $variant->variant_name ?? '',
+                'display_name'          => $product->name . (!empty($featureParts) ? ' / ' . implode(' / ', $featureParts) : ''),
+                'variant_features'      => $featureValues,
+                'variant_features_list' => $featureParts,
+                'slug'                  => $variant->slug ?? $product->slug,
+                'image'                 => $image,
+                'price'                 => $price,
+                'formatted_price'       => '₹' . number_format($price, 2),
+                'quantity'              => $row->quantity,
+                'max_qty'               => $isVariant ? ($variant->stock ?? 0) : ($product->stock ?? 0),
+                'is_variant'            => $isVariant,
+                'stock'                 => $isVariant ? ($variant->stock ?? 0) : ($product->stock ?? 0),
+                'subtotal'              => $subtotal,
+                'formatted_subtotal'    => '₹' . number_format($subtotal, 2),
+            ];
+        }
+
+        return $out;
+    }
+
+    private function getCartCount(int $userId): int
+    {
+        return (int) $this->cartModel->where('user_id', $userId)->sum('quantity');
+    }
+
+    /**
+     * Parse "21-11" or "21-0" into [productId, variantId].
+     */
+    private function parseKey(string $key): array
+    {
+        // Accept "21-11", "product_21", "variant_11", or "cart_5"
+        if (preg_match('/^(\d+)-(\d+)$/', $key, $m)) {
+            return [(int) $m[1], (int) $m[2]];
+        }
+        if (preg_match('/^product_(\d+)$/', $key, $m)) {
+            return [(int) $m[1], 0];
+        }
+        if (preg_match('/^variant_(\d+)$/', $key, $m)) {
+            $variant = $this->variantModel->find((int) $m[1]);
+            return $variant ? [(int) $variant->product_id, (int) $variant->id] : [0, 0];
+        }
+        if (preg_match('/^cart_(\d+)$/', $key, $m)) {
+            $row = $this->cartModel->find((int) $m[1]);
+            return $row ? [(int) $row->product_id, (int) $row->variant_id] : [0, 0];
+        }
+        return [0, 0];
+    }
+
     public function moveFromWishlist(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'product_id' => 'required|integer|exists:products,id',
-            'variant_id' => 'nullable|integer|exists:product_variants,id',
-            'quantity' => 'nullable|integer|min:1',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $productId = $request->product_id;
-        $variantId = $request->variant_id;
-        $quantity = (int) ($request->quantity ?? 1);
-
-        // Add to cart
-        $result = $this->add($request);
-
-        if ($result->getStatusCode() === 200 && $result->getData()->success) {
-            // Remove from wishlist (if logged in or guest)
-            // This would be handled by the WishlistController
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Item moved to cart successfully.',
-                'cart_count' => $this->getCartCount(),
-            ]);
-        }
-
-        return $result;
+        return $this->add($request);
     }
 
-    /**
-     * Apply coupon to cart.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function applyCoupon(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'coupon_code' => 'required|string|max:50',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        // This is a placeholder - implement coupon logic
-        // Check coupon in database, validate, apply discount
-
-        $couponCode = $request->coupon_code;
-
-        // Example response
         return response()->json([
             'success' => false,
             'message' => 'Coupon functionality not implemented yet.',
         ], 501);
     }
 
-    /**
-     * Remove coupon from cart.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function removeCoupon()
     {
-        // This is a placeholder - remove coupon from session
-
         return response()->json([
             'success' => true,
             'message' => 'Coupon removed successfully.',
