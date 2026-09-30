@@ -16,9 +16,6 @@ use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
-    /**
-     * @var Preference
-     */
     protected $preferenceModel;
 
     public function __construct()
@@ -26,9 +23,6 @@ class AdminController extends Controller
         $this->preferenceModel = new Preference();
     }
 
-    /**
-     * Get admin dashboard statistics.
-     */
     public function dashboard(Request $request)
     {
         $userModel = new User();
@@ -104,7 +98,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Admin login (public endpoint). Session-based, no tokens.
+     * Admin login — returns Sanctum bearer token.
      */
     public function login(Request $request)
     {
@@ -121,24 +115,17 @@ class AdminController extends Controller
             ], 422);
         }
 
-        $credentials = $request->only('email', 'password');
-
-        if (!Auth::attempt($credentials)) {
+        if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials',
             ], 401);
         }
 
-        $request->session()->regenerate();
-
         $user = Auth::user();
 
         if ($user->role !== 'admin') {
             Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Admin access required.',
@@ -147,14 +134,14 @@ class AdminController extends Controller
 
         if ($user->status !== 'active') {
             Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
             return response()->json([
                 'success' => false,
                 'message' => 'Account is inactive. Please contact support.',
             ], 403);
         }
+
+        // ✅ Return a Sanctum bearer token for the SPA
+        $token = $user->createToken('admin-token', ['admin'])->plainTextToken;
 
         Log::info('Admin login: ' . $user->email . ' (ID: ' . $user->id . ')');
 
@@ -171,25 +158,24 @@ class AdminController extends Controller
                     'status'      => $user->status,
                     'super_admin' => (int) $user->super_admin,
                 ],
-                'is_admin' => true,
+                'token'      => $token,
+                'token_type' => 'Bearer',
+                'is_admin'   => true,
             ],
         ]);
     }
 
     /**
-     * Admin logout — session based.
+     * Admin logout — revoke the current token.
      */
     public function logout(Request $request)
     {
         $user = Auth::user();
 
         if ($user) {
+            $user->currentAccessToken()?->delete();
             Log::info('Admin logout: ' . $user->email . ' (ID: ' . $user->id . ')');
         }
-
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
 
         return response()->json([
             'success' => true,
@@ -292,7 +278,7 @@ class AdminController extends Controller
             ], 422);
         }
 
-        $user->password = $request->new_password;  // mutator hashes it
+        $user->password = $request->new_password;
         $user->save();
 
         Log::info('Admin password changed: ' . $user->email . ' (ID: ' . $user->id . ')');
@@ -408,9 +394,6 @@ class AdminController extends Controller
         ]);
     }
 
-    /**
-     * Check admin session status.
-     */
     public function checkAuth(Request $request)
     {
         $user = Auth::user();
