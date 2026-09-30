@@ -40,7 +40,7 @@ class OrderItem extends Model
         'shipping',
         'tax',
         'created_at',
-    'updated_at',   // ← add back
+        'updated_at'
     ];
 
     /**
@@ -59,7 +59,7 @@ class OrderItem extends Model
         'shipping' => 'decimal:2',
         'tax' => 'decimal:2',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime',   // ← add back
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -67,7 +67,7 @@ class OrderItem extends Model
      *
      * @var bool
      */
-    public $timestamps = false;
+    public $timestamps = true;
 
     /**
      * The attributes that should be hidden for serialization.
