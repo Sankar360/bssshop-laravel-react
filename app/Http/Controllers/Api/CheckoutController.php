@@ -491,7 +491,7 @@ private function getCartRowDetails(Cart $row): ?array
             return response()->json(['success' => false, 'message' => 'Your cart is empty.'], 422);
         }
 
-        $cartData = $this->getCartDataForCheckout($cartRows);
+        $cartData = $this->buildCartDataFromRows($cartRows);
 
         if (empty($cartData['items'])) {
             return response()->json([
@@ -542,7 +542,6 @@ private function getCartRowDetails(Cart $row): ?array
             ]);
 
             Session::put('pending_order_id', $orderResult['order_id']);
-            Session::put('pending_cart', $cart);
 
             return response()->json([
                 'success' => true,
@@ -635,8 +634,6 @@ private function getCartRowDetails(Cart $row): ?array
             // ✅ Ensure an invoice exists even for repeat calls
             $this->generateInvoiceForOrder($order);
 
-            Session::forget('pending_cart');
-            Session::forget('cart');
             Session::put('last_order_id', $orderId);
             Session::forget('pending_order_id');
 
