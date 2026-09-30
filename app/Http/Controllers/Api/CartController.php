@@ -55,7 +55,7 @@ class CartController extends Controller
                 'formatted_shipping' => '₹' . number_format($shipping, 2),
                 'total' => $total,
                 'formatted_total' => '₹' . number_format($total, 2),
-                'cart_count' => $this->getCartCount($userId),
+                'cart_count' => $this->getCartItemCount($userId),
                 'free_shipping_threshold' => 100,
                 'shipping_threshold_met' => $subtotal >= 100,
             ],
@@ -170,7 +170,7 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Product added to cart successfully.',
-            'cart_count' => $this->getCartCount($userId),
+            'cart_count' => $this->getCartItemCount($userId),
         ]);
     }
 
@@ -215,7 +215,7 @@ class CartController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Item removed from cart.',
-                'cart_count' => $this->getCartCount($userId),
+                'cart_count' => $this->getCartItemCount($userId),
             ]);
         }
 
@@ -242,7 +242,7 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Cart updated successfully.',
-            'cart_count' => $this->getCartCount($userId),
+            'cart_count' => $this->getCartItemCount($userId),
             'subtotal' => $subtotal,
             'formatted_subtotal' => '₹' . number_format($subtotal, 2),
             'tax' => $tax,
@@ -287,7 +287,7 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Item removed from cart.',
-            'cart_count' => $this->getCartCount($userId),
+            'cart_count' => $this->getCartItemCount($userId),
         ]);
     }
 
@@ -318,7 +318,7 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'count' => $this->getCartCount($userId),
+                'count' => $this->getCartItemCount($userId),
                 'subtotal' => $subtotal,
                 'formatted_subtotal' => '₹' . number_format($subtotal, 2),
             ],
@@ -334,8 +334,8 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'has_items' => $this->getCartCount($userId) > 0,
-                'count' => $this->getCartCount($userId),
+                'has_items' => $this->getCartItemCount($userId) > 0,
+                'count' => $this->getCartItemCount($userId),
             ],
         ]);
     }
@@ -350,7 +350,7 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'data' => $items,
-            'count' => $this->getCartCount($userId),
+            'count' => $this->getCartItemCount($userId),
         ]);
     }
 
@@ -449,7 +449,7 @@ class CartController extends Controller
         return $out;
     }
 
-    private function getCartCount(int $userId): int
+    private function getCartItemCount(int $userId): int
     {
         return (int) $this->cartModel->where('user_id', $userId)->sum('quantity');
     }
