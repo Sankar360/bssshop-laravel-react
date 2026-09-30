@@ -9,11 +9,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AdminMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * Allow the request only if the authenticated user has role = 'admin'.
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();

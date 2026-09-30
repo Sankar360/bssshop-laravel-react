@@ -123,13 +123,6 @@ Route::prefix('auth')->group(function () {
 // ADMIN LOGIN ROUTES (Public)
 // ============================================================
 
-// Route::prefix('admin')->group(function () {
-//     Route::post('/login', [AdminController::class, 'login']);
-// });
-
-// ============================================================
-// TEMPORARY DEBUG ROUTES — DELETE WHEN DONE
-// ============================================================
 
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminController::class, 'login']);
